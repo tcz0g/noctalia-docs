@@ -57,6 +57,8 @@ binds {
     Mod+Space { spawn-sh "noctalia msg panel-toggle launcher"; }
     Mod+S { spawn-sh "noctalia msg panel-toggle control-center"; }
     Mod+Comma { spawn-sh "noctalia msg settings-toggle"; }
+    Alt+Tab { spawn-sh "noctalia msg window-switcher"; }
+    // Niri has a built-in window switcher you might want to try it to see which one you prefer.
 
     // Audio & Brightness
     XF86AudioRaiseVolume { spawn-sh "noctalia msg volume-up"; }
@@ -180,6 +182,15 @@ layer-rule {
   }
 }
 
+/* Enable blur on noctalia's window switcher and disable xray. */
+layer-rule {
+    match namespace="noctalia-window-switcher"
+    background-effect {
+        blur true
+        xray false
+    }
+}
+
 /* You can also fine-tune the blur effect globally. */
 blur {
   passes 2        // more passes = stronger blur (default: 3)
@@ -220,3 +231,23 @@ layer-rule {
   match namespace="^noctalia-desktop-widget-weather-"
 }
 ```
+
+## Laptop
+
+To lock the screen when you close your laptop lid, add this to your Niri config file:
+``` kdl
+switch-events {
+    lid-close { spawn "noctalia" "msg" "session" "lock-and-suspend"; }
+}
+```
+
+You may also need to edit your `logind.conf` to set:
+```
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+```
+
+:::note
+This file is usually located in `/etc/systemd/logind.conf` or `/etc/elogind/logind.conf` if you don't use systemd.
+If you can't find it, use this command: `find / -name "logind.conf" 2>/dev/null`.
+:::
