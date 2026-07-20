@@ -29,7 +29,7 @@ lang                  = "en"            # override language detection; BCP-47 or
 time_format           = "{:%H:%M}"      # default time format for shell UI without its own setting
 date_format           = "%A, %x"        # default date format for shell UI without its own setting
 offline_mode          = false           # block all outgoing HTTP requests
-external_ip_enabled   = false           # resolve and show the WAN IP in the Control Center network tab
+external_ip_enabled   = false           # resolve the WAN IP for the Control Center network tab and network widget tooltip
 telemetry_enabled     = false           # anonymous startup ping
 setup_wizard_enabled = true              # open first-run wizard while the marker is missing
 niri_overview_type_to_launch_enabled = false # niri-only type-to-launch from overview
@@ -64,6 +64,7 @@ alpha     = 0.55    # multiplied by each component's background opacity
 transparency_mode     = "solid"  # solid | soft | glass; controls floating/centered opacity and card translucency
 borders               = true   # outline on floating/centered panel shells and section cards inside panels
 shadow                = true   # cast the global [shell.shadow] from panel surfaces
+list_item_background  = false  # filled rounded background behind launcher and clipboard list items
 launcher_placement       = "centered" # attached | floating | centered
 clipboard_placement      = "centered" # attached | floating | centered
 control_center_placement = "attached" # attached | floating | centered
@@ -126,7 +127,7 @@ size    = 32       # corner radius in logical pixels (1–100)
 
 [hot_corners]
 enabled = false    # trigger actions by pushing the mouse pointer into screen corners
-delay_ms = 150     # wait time before triggering to avoid accidental hits
+delay_ms = 0       # hold time before triggering (0 = immediate; raise to avoid accidental hits)
 
 # Configure each corner independently. Available actions:
 # none | launcher | window-switcher | control-center | command
@@ -158,7 +159,7 @@ Notes:
 - `font_family` sets the primary Pango family for all shell text. Can be a concrete family like `Inter` or a generic like `sans-serif`.
 - `time_format` and `date_format` are fallbacks for shell-owned displays such as the home tab, calendar tab, and lock screen. Widget-specific clock formats still use their own widget settings. See [Date format tokens](/v5/configuration/date-format-tokens/).
 - `offline_mode` prevents the shell from making any outgoing HTTP requests (weather, community palettes, community templates, album art, remote notification icons, currency exchange rates). Distro packagers can default to `true` to comply with policies requiring explicit user consent for network access.
-- `external_ip_enabled`: when `true`, the Control Center network tab resolves the connection's public WAN IP via `api.noctalia.dev/ip` and shows it next to the local address. Re-resolves automatically after connection or VPN changes.
+- `external_ip_enabled`: when `true`, Noctalia resolves the connection's public WAN IP via `api.noctalia.dev/ip` and shows it in the Control Center network tab (next to the local address) and in the network widget tooltip. Resolution runs in the background while connected and re-resolves automatically after connection or VPN changes. Honors `offline_mode`.
 - `telemetry_enabled` sends a single anonymous POST to `api.noctalia.dev/ping` on each startup containing: a random instance ID, shell version, compositor name, OS name, RAM, monitor resolutions, and UI scale. No personal data is collected. The instance ID is a random UUID stored in `~/.local/state/noctalia/instance.id`.
 - `setup_wizard_enabled`: when `false`, Noctalia does not auto-open the setup wizard on startup even if `.setup-complete` is missing. Use this for declarative or preseeded deployments; the marker remains the normal completion state for interactive runs.
 - `niri_overview_type_to_launch_enabled` is opt-in. When `true` on niri, Noctalia keeps a tiny keyboard-focus layer surface while overview is open so typing a letter or number opens the launcher with that initial query. This gives up niri's exact native handling for some overview-only keyboard state, such as the app focus ring.
@@ -190,6 +191,7 @@ Notes:
 - `shell.panel.transparency_mode` controls panel glass styling. `solid` keeps cards opaque and floating/centered panels solid, `soft` makes floating/centered panels lightly translucent and cards subtly translucent, and `glass` makes both visibly translucent while clamping card opacity high enough for readable text. Attached panels continue to use the effective panel background opacity inherited from the host bar.
 - `shell.panel.borders` draws an outline on detached panel shells and on section cards inside panels (control center tabs, clipboard preview, setup wizard steps, etc.). Attached bar-merged panels stay borderless on the shell edge. Default is `true`; set to `false` for a flatter, borderless look.
 - `shell.panel.shadow` toggles the rendered drop shadow on attached, floating, and centered panels. Shadow direction and alpha come from `[shell.shadow]`.
+- `shell.panel.list_item_background` draws a filled rounded background behind each item in the launcher results (list and app-grid views) and the clipboard history list. The fill uses the same rounded shape as the hover highlight and follows the panel transparency mode; hover and keyboard-selection colors are unchanged. Default is `false`. Toggle in **Settings → Panels → Effects**.
 - `shell.panel.launcher_placement`, `clipboard_placement`, `control_center_placement`, `wallpaper_placement`, `session_placement`, and `polkit_placement` accept `attached` or `floating`. `attached` merges the panel with the host bar where the bar's position and placement allow it; `floating` keeps the panel detached. Defaults are floating for Launcher and Clipboard (with `*_position = "center"`), attached for Control Center, Wallpaper, and Session, and floating centered for the polkit auth prompt (`polkit_placement = "floating"`, `polkit_position = "center"`).
 - Per-panel `*_position` keys (`launcher_position`, `clipboard_position`, `control_center_position`, `wallpaper_position`, `session_position`, `polkit_position`) apply when placement is `floating`. `auto` keeps the panel bar-relative; `center` and the edge/corner tokens anchor on screen (same vocabulary as notification/OSD position).
 - `shell.panel.floating_offset` sets the gap in pixels between a floating or detached panel and the bar edge (default `8`). It applies to `floating` placement and to panels using the reserved edge area when multiple bars share an edge; `attached` and `centered` panels ignore it.
@@ -211,7 +213,7 @@ Notes:
 - `shell.screenshot` holds the global output policy for all screenshot captures (region, fullscreen), shared by the screenshot bar widget and the `screenshot-region` / `screenshot-fullscreen` IPC commands. At least one of `save_to_file`, `copy_to_clipboard`, or `pipe_to_command` must be enabled or the capture reports "No screenshot output enabled". `directory` accepts `~`; `filename_pattern` is a [strftime](/v5/configuration/date-format-tokens/) pattern (the `.png` extension is appended). `copy_to_clipboard` requires clipboard integration (`clipboard_enabled = true`). `pipe_command` runs via `/bin/sh -lc` with the PNG written to its stdin - use it for annotators or uploaders (`swappy -f -`, `satty -f -`); for plain clipboard copies use `copy_to_clipboard` instead. `confirm_region` keeps the region overlay open after selection until you press Enter or Space (Esc cancels; drag again to reselect). The bar widget itself only configures its `glyph` and `primary_click` (region vs fullscreen). On **multiple monitors**, fullscreen from the bar (or `screenshot-fullscreen pick`) opens a display picker with one button per connector; scripts can skip the picker with `noctalia msg screenshot-fullscreen DP-1` (connector name). Edit in **Settings → Shell → Screenshot**.
 - When `pipe_to_command` runs, `NOCTALIA_SCREENSHOT_PATH` is set to the generated PNG path for that capture. If `save_to_file = true`, Noctalia writes the original PNG there before launching the command; if it is false, the path is still available for commands that need an output target, such as `satty -f - -o "$NOCTALIA_SCREENSHOT_PATH"`.
 - **Window switcher** is an Alt+Tab-style overlay with no `[shell]` settings yet. Bind your compositor shortcut to `noctalia msg window-switcher` (see [Shell → Window switcher](/v5/ipc/shell/#window-switcher)). While open, windows appear in a centered grid (up to five columns) with application icons, titles, and a per-window close control. Tab / Shift+Tab cycle selection; arrow keys move within the grid; releasing Alt or Enter confirms; Escape cancels. The list updates live when windows open, close, or retitle while the overlay stays open.
-- **Hot corners** let you trigger actions by pushing your mouse pointer into one of the four screen corners. When `[hot_corners].enabled = true`, the shell places invisible 1x1 hit areas in each corner. The pointer must rest in the corner for `delay_ms` (default 150) before the action triggers. Each corner (`top_left`, `top_right`, `bottom_left`, `bottom_right`) takes an `action`. If `action` is `"command"`, provide a shell `command` to execute. Configure under **Settings → Desktop → Hot Corners**.
+- **Hot corners** let you trigger actions by pushing your mouse pointer into one of the four screen corners. When `[hot_corners].enabled = true`, the shell places invisible hit areas in each corner. `delay_ms` (default `0`) is how long the pointer must stay in the corner before the action runs — raise it to reduce accidental triggers. Each corner (`top_left`, `top_right`, `bottom_left`, `bottom_right`) takes an `action`. If `action` is `"command"`, provide a shell `command` to execute. Configure under **Settings → Desktop → Hot Corners**.
 
 ### App icon colorization
 
@@ -449,6 +451,8 @@ countdown_seconds = 5
 
 ### Greeter sync
 
+Requires [Noctalia Greeter](/v5/greeter/) and `noctalia-greeter-apply-appearance` on `PATH`. When those are missing, auto-sync stays off, Security settings for greeter sync are hidden, and the `greeter-sync` IPC command is not registered.
+
 **Settings → Security → Auto-Sync Greeter** and **Settings → Security → Greeter Sync Privilege Command**, or in TOML:
 
 ```toml
@@ -459,7 +463,7 @@ privilege_command = "ghostty -e pkexec"
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `auto_sync` | `bool` | `false` | Automatically sync the greeter whenever wallpaper, colors, or theme mode change. |
+| `auto_sync` | `bool` | `false` | Automatically sync the greeter whenever wallpaper, colors, or theme mode change. Ignored when the greeter is not installed. |
 | `privilege_command` | `string` | `""` | Replaces the default `pkexec` or `run0` prefix for **Sync Now**. Noctalia appends the `noctalia-greeter-apply-appearance` path and staging directory. Leave empty for the default escalator. |
 
 See [Noctalia Greeter](/v5/greeter/) for seatd and polkit notes.

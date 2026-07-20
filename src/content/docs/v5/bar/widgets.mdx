@@ -130,7 +130,7 @@ Icon-only running application list. By default it follows the bar’s monitor (o
 
 Application icons use global `[shell.app_icon_colorize]` when enabled (see [Shell → App icon colorization](/v5/shell/#app-icon-colorization)).
 
-Left-click an icon to focus that window. The active window shows a small primary dot under the icon.
+Left-click an icon to focus that window. Middle-click an icon to close that window (the active window when a grouped app tile represents several). Middle-click in the gaps between icons still opens the taskbar widget settings when `[shell].middle_click_opens_widget_settings` is enabled. The active window shows a small primary dot under the icon.
 When grouped app collapsing is enabled, multi-window app tiles also show compact right-edge dots over the icon.
 
 **Only active workspace** limits the list to windows the shell can place on a workspace that is currently active on its monitor (same idea as the v4 taskbar option). It works with or without `group_by_workspace`; with grouping, inactive workspace capsules are omitted.
@@ -383,17 +383,21 @@ Shows the current media artwork and track title from MPRIS. On vertical bars (`l
 |---------|------|---------|-------------|
 | `album_art_only` | bool | `false` | Show only circular album artwork (horizontal bars; hidden in Settings on vertical bars) |
 | `hide_album_art` | bool | `false` | Hide the album artwork (horizontal bars). Also hides the fallback icon |
+| `hide_artist` | bool | `false` | Hide the artist and show only the track title (horizontal bars; ignored when `album_art_only` is enabled) |
+| `artist_first` | bool | `false` | Show `Artist - Title` instead of `Title - Artist` (horizontal bars; ignored when `hide_artist` or `album_art_only` is enabled) |
 | `min_length` | number | `80` | Minimum widget length in pixels (hidden when `album_art_only` is enabled) |
 | `max_length` | number | `220` | Maximum widget length in pixels (hidden when `album_art_only` is enabled) |
 | `art_size` | number | `16` | Artwork size in pixels before scale |
 | `title_scroll` | string | `"none"` | Media title scrolling mode: `"none"`, `"always"`, or `"on_hover"` (hidden when `album_art_only` is enabled) |
 | `hide_when_no_media` | bool | `false` | Hide the widget when no MPRIS player is active |
+| `enable_scroll` | bool | `true` | Allow mouse wheel and trackpad scrolling to skip to the previous/next track |
 
 ```toml
 [widget.media]
-album_art_only = true
-art_size       = 24
+artist_first = true
+art_size     = 24
 hide_when_no_media = true
+enable_scroll = true
 ```
 
 ---
@@ -540,8 +544,8 @@ Left-click cycles layouts using the compositor backend when supported. Override 
 | `custom_image` | string | `""` | Path to a custom image displayed instead of the glyph. Shown only when `show_icon = true` |
 | `custom_image_colorize` | bool | `false` | When `true`, tint the custom image with the widget icon color |
 | `show_label` | bool | `true` | Show the layout text label next to the keyboard glyph |
-| `display` | string | `"short"` | `"short"` = compact code; `"full"` = full layout name. Ignored when `show_label = false`. |
-| `custom_labels` | table | `{}` | Exact layout-name to label overrides. Matching labels override `display`; unmatched layouts still use `short` or `full`. |
+| `display` | string | `"short"` | `"short"` = compact code; `"full"` = full layout name. Ignored when `show_label = false`. Also used by the keyboard-layout OSD and lockscreen indicator. |
+| `custom_labels` | table | `{}` | Exact layout-name to label overrides. Matching labels override `display`; unmatched layouts still use `short` or `full`. Shared with the keyboard-layout OSD and lockscreen indicator. |
 
 At least one of `show_icon` or `show_label` must be `true`.
 
