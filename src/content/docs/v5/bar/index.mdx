@@ -13,7 +13,7 @@ Widget hover tooltips open on the side of the bar facing into the screen — bel
 [bar]
 order = ["main"]              # layer-shell creation order
 
-[bar.main]
+[bar.default]
 position           = "top"       # top | bottom | left | right
 enabled            = true
 auto_hide          = false       # slide out after pointer leaves; reveal from edge trigger strip
@@ -88,20 +88,23 @@ are appended after the listed names.
 
 ### Dead zone actions
 
-The **dead zone** is the bar margin outside the start/center/end widget sections - typically the inset created by `margin_ends`. Configure shell commands under `[bar.<name>.dead_zone]`:
+The **dead zone** is the bar margin outside the start/center/end widget sections - typically the inset created by `margin_ends`. It takes the same bindings bar widgets do, under `[bar.<name>.dead_zone.actions]`:
 
 ```toml
-[bar.main.dead_zone]
-command = "noctalia msg launcher toggle"   # left click
-right_command = ""                         # empty = open Control Center (default)
-middle_command = "..."                     # middle click
-scroll_up_command = "..."
-scroll_down_command = "..."
+[bar.default.dead_zone.actions]
+left = "panel-toggle launcher"
+middle = "exec kitty"
+scroll_up = "volume-up"
+scroll_down = "volume-down"
+back = "media previous"
+forward = "media next"
 ```
 
-Right-click still opens Control Center when `right_command` is empty. Set `right_command` to override that on dead-zone clicks only. While an attached panel is open, right-click anywhere on the bar still toggles Control Center unless a dead-zone `right_command` is configured and the click lands in the dead zone.
+All nine gestures are available, and an action is an IPC command, `exec <command line>`, or `none` - see [Widget Actions](/v5/bar/actions/) for the full vocabulary. Panel actions anchor at the pointer, since there is no widget to anchor to.
 
-Per-monitor overrides can set any dead-zone command under `[bar.<name>.monitor.<match>.dead_zone]`; unset fields inherit from the bar defaults.
+Right-click opens Control Center unless you bind `right` to something else. While an attached panel is open, right-click anywhere on the bar still toggles Control Center unless the click lands in the dead zone and `right` is bound.
+
+Per-monitor overrides can carry their own `[bar.<name>.monitor.<match>.dead_zone.actions]` table, which replaces the bar's rather than merging with it.
 
 ---
 
@@ -110,7 +113,7 @@ Per-monitor overrides can set any dead-zone command under `[bar.<name>.monitor.<
 Inside a bar, add named monitor subtables under `[bar.<name>.monitor.*]`. **First match wins**, in file order.
 
 ```toml
-[bar.main.monitor.dp1]
+[bar.default.monitor.dp1]
 match              = "DP-1"    # connector name or description substring
 position           = "bottom"  # top | bottom | left | right
 enabled            = true
@@ -133,7 +136,7 @@ end                = ["volume", "clock"]
 1. Exact connector name (`eDP-1`, `DP-1`, `HDMI-A-1`, …)
 2. Any substring of the monitor description string (`"LG"`, `"4K"`, `"DELL"`, …)
 
-`match` defaults to the subtable key name when omitted, so `[bar.main.monitor."DP-1"]` without a `match` field works too.
+`match` defaults to the subtable key name when omitted, so `[bar.default.monitor."DP-1"]` without a `match` field works too.
 
 Only the fields you specify are overridden; everything else falls through to the `[bar.*]` defaults. Supported override fields: all bar fields including `position`, `dead_zone`, plus `auto_hide`, `smart_auto_hide`, `show_on_workspace_switch`, `reserve_space`, `layer`, `scale`, `background_opacity`, `color`, `font_family`, and all `capsule_*` keys.
 
@@ -173,7 +176,7 @@ Set auto-hide to **Smart** in bar settings (or `smart_auto_hide = true` with `au
 
 `margin_opposite_edge` adds extra reserved space on the inward side of the bar (below a top bar, above a bottom bar, and so on for vertical bars). The bar itself does not move; the compositor exclusive zone grows so tiled and maximized windows stop further away. Use it when a compositor ignores or under-reserves struts - for example Labwc with a maximized window that still touches the bar. Requires `reserve_space = true`. The default is `0`.
 
-`layer = "overlay"` shows the bar above fullscreen apps. Attached panels (for example Control Center when it attaches to the bar) follow the bar's layer. Centered or floating panel placements keep each panel's own layer (typically overlay).
+`layer = "overlay"` shows the bar above fullscreen apps. Attached panels (for example Control Center when it attaches to the bar) follow the bar's layer. Floating panels keep their own layer (typically overlay), including when their screen position is `center`.
 
 The IPC `bar-layer-set <top|overlay> [bar-name] [monitor-selector]` switches the layer of matching bar instance(s) at runtime; omit `bar-name` to update every bar. The change is transient and resets to the configured `layer` on the next config reload. This is handy for peeking the bar above a fullscreen window on a keybind, for example in niri:
 
@@ -214,6 +217,9 @@ Set under `[widget.<name>]`:
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `scale` | number | `1.0` | Multiplies the owning bar's `scale` for this widget only (clamped 0.2–2.5). |
+| `anchor` | bool | `false` | Pin this widget as the center lane's alignment anchor. |
+| `font_family` | string | *(from bar)* | Typeface for this widget. Leave empty to inherit the owning bar's font. |
+| `font_weight` | integer | *(from bar)* | CSS font weight `100`–`1000`. Leave unset to inherit the owning bar's weight. |
 | `capsule` | bool | *(from bar)* | Omit to inherit bar flag; `false` disables; `true` forces on. |
 | `capsule_radius` | number | *(from bar)* | Per-widget corner radius (0–80). Omit to inherit; omit at every level for automatic pill radius. |
 | `capsule_fill` | string | *(from bar)* | Capsule background color role; fixed hex colors are also supported. |
@@ -223,7 +229,8 @@ Set under `[widget.<name>]`:
 | `capsule_border` | string | *(from bar)* | Color role for the capsule border; fixed hex colors are also supported. Omit to inherit bar policy. Present but empty/whitespace-only = no border. |
 | `color` | string | *(unset)* | Icon + label color role with or without capsule; fixed hex colors are also supported. Resolution order: `color` → `capsule_foreground` → built-in defaults. |
 | `icon_color` | string | *(unset)* | Overrides `color` for icons only. Resolution order for icons: `icon_color` → `color` → `capsule_foreground` → built-in defaults. Labels always use `color`. |
-| `interactive` | bool | `true` | Set `false` to make the widget passive: hover highlight and tooltips are disabled, and pointer events (clicks, scrolls) pass through to the bar underneath. The widget is still drawn — use `enabled = false` to hide it entirely. |
+| `interactive` | bool | `true` (spacers: `false`) | Set `false` to make the widget passive: hover highlight and tooltips are disabled, pointer events (clicks, scrolls) pass through to the bar underneath, and the **Actions** settings section is hidden. The widget is still drawn — use `enabled = false` to hide it entirely. Spacers default to non-interactive so they stay click-through layout gaps. |
+| `scroll_repeat` | string | `auto` | Scroll action repetition: `auto` uses once-per-gesture for cycle commands and every-step for ramp commands; `gesture` always runs once per gesture; `steps` always runs for every quantized step. |
 | `enabled` | bool | `true` | Show or hide this widget on the bar. Disabled widgets are not created and consume no resources. |
 
 Prefer color role names so widget styling follows the active palette. Role names use **snake_case** (e.g. `on_surface`, `surface_variant`, `secondary`). Use fixed hex colors only when you deliberately want a non-palette color; hex may use `#RGB`, `#RGBA`, `#RRGGBB`, or `#RRGGBBAA`. Invalid role names or malformed hex colors are treated as config errors.
@@ -234,7 +241,7 @@ The workspaces widget reuses its resolved `capsule_radius` for workspace pills. 
 capsule is disabled.
 
 ```toml
-[bar.main]
+[bar.default]
 capsule         = true
 capsule_fill    = "surface_variant"
 capsule_opacity = 0.9
@@ -266,9 +273,13 @@ widget elsewhere can never split it. Grouping is managed entirely from the Setti
 
 1. Open **Settings → Bar → Bar Widgets**.
 2. **Drag one widget onto the middle of another** (using its drag handle) to instantly create a group from the two.
-   Or tick the checkbox on two or more **adjacent** widgets and click **Group**. Either way they move into one
-   group container and a style editor opens.
-3. Edit the group's background, border, foreground, padding, radius, and opacity - every member updates together.
+   Or tick the checkbox on two or more widgets in the same lane and click **Group** - they need not sit next to
+   each other; the group takes the place of the first one. Either way they move into one group container and a
+   style editor opens.
+3. Edit the group's background, border, foreground, padding, spacing, radius, and opacity - every member updates
+   together.
+   Turning on **Accordion** collapses the group to its first widget until you hover it; **Reveal direction** picks
+   which side the remaining widgets unfold on.
 4. **Drag a widget onto the group** to add it; **drag a member out**, or use its eject button, to remove it.
    Reorder members by dragging them within the group. Drag the group's own handle to move the whole group along
    the lane or into another lane.
@@ -282,16 +293,19 @@ shared style, and the lane references the group with a single `group:<id>` token
 by hand:
 
 ```toml
-[bar.main]
+[bar.default]
 end = ["clock", "group:g1", "session"]   # the group occupies one lane slot
 
-[[bar.main.capsule_group]]
+[[bar.default.capsule_group]]
 id      = "g1"
 members = ["network", "bluetooth", "volume"]
 fill    = "surface_variant"
 padding = 6.0
 opacity = 0.9
 enabled = true
+accordion = true                         # optional: collapse to the first widget, reveal on hover
+accordion_direction = "end"              # "end" (default) or "start"
+widget_spacing = 10                      # optional: gap between this group's widgets
 # border, foreground, radius, enabled are optional
 ```
 
@@ -306,11 +320,9 @@ enabled = true
 | `padding` | number | `6` | Inner padding between the capsule edge and its widgets, in logical pixels (clamped 0–48). |
 | `radius` | number | *(auto pill)* | Capsule corner radius in logical pixels (0–80). Omit for automatic pill radius. |
 | `opacity` | number | `1.0` | Capsule background opacity (0.0–1.0). |
-| `drawer_enabled` | bool | `false` | Replace the group's inline members with a drawer button that opens them in a panel. |
-| `drawer_detached` | bool | `false` | Open the drawer as a detached panel instead of keeping it attached to the bar. |
-| `drawer_glyph_closed` | string | `chevron-down` | Drawer button glyph when the panel is closed. |
-| `drawer_glyph_opened` | string | `chevron-up` | Drawer button glyph when the panel is open. |
-| `drawer_columns` | number | `3` | Number of widget slots per row in the drawer panel (`1` to `5`). |
+| `accordion` | bool | `false` | Collapse the group to its first widget; hovering the capsule expands it in place to reveal the rest. Needs at least two widgets in the group. |
+| `accordion_direction` | string | `end` | Where the hidden widgets unfold relative to the first one along the lane: `end` (after it) or `start` (before it). |
+| `widget_spacing` | integer | *(bar's `widget_spacing`)* | Gap between the group's widgets, in logical pixels. Omit to inherit the bar's `widget_spacing`. |
 
 A group's style can be overridden per monitor by declaring `[[bar.<name>.monitor.<match>.capsule_group]]` tables
 with matching `id` values. A reused widget name (e.g. several `spacer` instances) can appear in different groups

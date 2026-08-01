@@ -6,6 +6,8 @@ sidebar:
   order: 3
 ---
 
+import PluginApiBadge from '../../../../../components/PluginApiBadge.astro';
+
 :::caution[Beta - APIs may still change]
 The plugin system is in **beta**. The manifest format and APIs may still change before v5 is stable, so build with that in mind.
 :::
@@ -18,23 +20,83 @@ apply depends on the entry kind:
 | `update()` | ✓ | | | ✓ | ✓ | ✓ | every update interval |
 | `onClick()` / `onRightClick()` | ✓ | ✓ | | | | | pointer press |
 | `onMiddleClick()` | ✓ | | | | | | middle press |
-| `onScroll(axis, steps)` | ✓ | | | | | | wheel or touchpad scroll over the widget (see below) |
+| `onScroll(axis, steps, startsGesture)` | ✓ | | | | | | wheel or touchpad scroll over the widget (see below) |
 | `onQuery(text)` | | | ✓ | | | | launcher text changed (behind the prefix) |
 | `onActivate(id)` | | | ✓ | | | | a launcher result was selected |
+| `onEnable()` | | | | | | ✓ | the plugin was explicitly enabled successfully (see below) |
 | `onOpen(context)` / `onClose()` | | | | | ✓ | | the panel is opened / closed |
-| `onFrameTick(deltaMs)` | | | | ✓ | | | every frame, after `desktopWidget.setNeedsFrameTick(true)` |
+| `onKey(chord, pressed)` | | | | | ✓ | | a `capture_keys` chord while the panel is focused ([details](/v5/plugins/development/declarative-ui/#handling-keys-directly)) |
+| `onFrameTick(deltaMs)` | | | | ✓ | ✓ | | every frame, after `desktopWidget.setNeedsFrameTick(true)` / `panel.setNeedsFrameTick(true)` |
 | `onIpc(event, payload)` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `noctalia msg plugin …` |
 | `onConfigChanged()` | | | | | | ✓ | a plugin setting changed (see below) |
-| `onExit(signal)` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | the entry runtime is about to be destroyed (see below) |
+| `onExit(signal, reason)` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | the entry runtime is about to be destroyed (see below) |
 
 The top level of the script runs once at load - set up state and register `noctalia.state.watch` handlers there.
 
+### Modules
+
+Entry scripts can split shared logic into relative `.luau` modules with
+<PluginApiBadge feature="module-require" />:
+
+```lua
+local format = require("./lib/format.luau")
+```
+
+The argument must be a string starting with `./` or `../` and ending in `.luau`. Any other value fails with
+`require path must be relative and end in .luau`. Paths are lexical: each `require()` resolves relative to the file
+that contains the call, even if the call runs later from a function that module returned.
+
+```lua
+-- entry.luau
+local tools = require("./lib/tools.luau")
+tools.loadTheme()
+
+-- lib/tools.luau
+local M = {}
+
+function M.loadTheme()
+  -- Resolves from lib/, not from entry.luau.
+  return require("../shared/theme.luau")
+end
+
+return M
+```
+
+There are no package search paths, implicit extensions, `init.luau` alternatives, or path containment checks. `../`
+can leave the plugin directory, just like the rest of the trusted-plugin filesystem API.
+
+A module must return exactly one non-`nil` value. It runs in the entry's VM, but gets its own global environment:
+`noctalia.*`, `ui.*`, and the other sandboxed globals are visible, while globals assigned by the module stay private to
+that module. Inside a module, `_G` is the module environment, not the entry's `_G`.
+
+Each entry keeps its own module cache. Requiring the same canonical path returns the cached value without re-running the
+module; symlinks resolve to the same cache identity. A different widget, panel, or service entry gets a separate module
+instance. Circular imports fail with the full import chain.
+
+Editing a successfully loaded module hot-reloads the owning entry, including a module first required inside a callback.
+A module that failed to load is not cached or watched, so creating a previously missing module does not reload anything
+by itself. Touch the entry script, or another successfully loaded file, to retry it.
+
+### Pointer callbacks are overridable
+
+On a bar widget, what a click or scroll does is user configuration. A binding in
+`[widget.<name>.actions]` takes precedence over your script, so a user who binds `right` stops
+`onRightClick` from firing for that instance. Gestures nobody has bound still reach your callbacks.
+
+You can declare your own defaults in the manifest - see
+[widget gesture defaults](/v5/plugins/development/manifest/#widget-gesture-defaults) - and
+[Widget Actions](/v5/bar/actions/) for the full gesture and action vocabulary.
+
+`onMiddleClick` is the exception worth planning for: every widget gets a built-in `middle` binding
+that opens its settings, so the callback does not fire unless a `middle = "none"` binding frees the
+button, either in your manifest or in the user's config.
+
 ### Reacting to scroll
 
-Define `onScroll(axis, steps)` on a bar widget to handle mouse-wheel and touchpad scrolling over it. `axis` is
-`"vertical"` or `"horizontal"`, and `steps` is a number of whole wheel detents: negative scrolls up or left, positive
-scrolls down or right. A mouse wheel reports one step per notch; a touchpad accumulates its finer movement and reports a
-step once a full detent's worth has built up, so one gesture means the same thing on both devices.
+Define `onScroll(axis, steps, startsGesture)` on a bar widget to handle mouse-wheel and touchpad scrolling over it.
+`axis` is `"vertical"` or `"horizontal"`, and `steps` is a number of whole wheel detents: negative scrolls up or left,
+positive scrolls down or right. A mouse wheel reports one step per notch; a touchpad accumulates its finer movement and
+reports a step once a full detent's worth has built up, so one gesture means the same thing on both devices.
 
 ```lua
 local volume = 50
@@ -48,25 +110,91 @@ function onScroll(axis, steps)
 end
 ```
 
+`startsGesture` is `true` only on the first step of a scroll gesture in a given direction: the wheel or the finger had
+stopped, or the scroll just reversed. Ramping a value, as above, ignores it and takes every step. Stepping through a
+list wants the opposite - an eager wheel flick emits several notches that the user means as one move - so act on
+`startsGesture` and let the rest of the burst fall through:
+
+```lua
+local entries = { "one", "two", "three" }
+local index = 1
+
+function onScroll(axis, steps, startsGesture)
+  if axis ~= "vertical" or not startsGesture then
+    return
+  end
+  index = math.clamp(index + (steps > 0 and 1 or -1), 1, #entries)
+  barWidget.setText(entries[index])
+end
+```
+
 Scroll events the widget does not define `onScroll` for are left for the bar underneath to handle.
 Host setting `enable_scroll` (default `true`) on the bar widget instance gates wheel and touchpad delivery to
-`onScroll`; set it to `false` to disable scroll actions without removing the handler.
+`onScroll`; set it to `false` to disable scroll actions without removing the handler. It is independent of any
+scroll binding: a bound `scroll_up` runs its action instead of calling `onScroll`, while `enable_scroll = false`
+silences the callback outright.
 
 ### Cleaning up when an entry exits
 
-Define `onExit(signal)` to release resources owned by an entry before its Luau runtime is destroyed. It runs when
+Define `onExit(signal, reason)` to release resources owned by an entry before its Luau runtime is destroyed. It runs when
 Noctalia exits normally, when a plugin or entry is disabled or removed, and before a runtime is restarted or reloaded.
-The callback receives `2` for a graceful `SIGINT` shutdown, `15` for `SIGTERM`, and `0` for every other teardown. You
-may omit the parameter when the reason does not matter:
+The first argument remains the process signal: `2` for graceful `SIGINT`, `15` for `SIGTERM`, and `0` for every other
+teardown. The optional second argument requires <PluginApiBadge feature="service-lifecycle" /> and describes why the
+runtime is exiting:
+
+| Reason | Meaning |
+|--------|---------|
+| `"disable"` | The enabled plugin is being explicitly disabled. |
+| `"uninstall"` | The enabled plugin is being explicitly uninstalled. |
+| `"reload"` | The entry is being reloaded, restarted, or otherwise replaced without a process shutdown. |
+| `"shutdown"` | Noctalia is shutting down after `SIGINT` or `SIGTERM`. |
+
+Existing handlers that accept only `signal` remain compatible; Luau ignores the additional argument:
 
 ```lua
-function onExit(_signal)
-  noctalia.runAsync("pkill -TERM -x my-plugin-helper 2>/dev/null || true")
+function onExit(_signal, reason)
+  if reason == "disable" then
+    noctalia.runAsync("systemctl --user stop my-plugin.service")
+  elseif reason == "uninstall" then
+    noctalia.runAsync("systemctl --user disable --now my-plugin.service")
+  end
 end
 ```
 
 Keep cleanup short: `onExit` has the normal callback time budget. It cannot run after `SIGKILL`, a process crash, or
-another abrupt termination that prevents Noctalia from shutting down gracefully.
+another abrupt termination that prevents Noctalia from shutting down gracefully. If cleanup must continue after the
+entry VM is destroyed, call `noctalia.runAsync(command)` without a result callback; the detached command outlives the
+runtime. An uninstall command must use an installed helper or otherwise avoid plugin-directory files, which may be
+removed as soon as the hook returns. A detached command cannot report its eventual result back to the destroyed
+runtime, so make cleanup idempotent and expose a way for the user to retry it.
+
+### Reacting to plugin lifecycle changes in a service
+
+Every entry can use the extended `onExit(signal, reason)`, while service entries can additionally define `onEnable()`.
+Both capabilities require <PluginApiBadge feature="service-lifecycle" />. `onEnable()` runs after an explicit enable
+succeeds and after the service runtime has loaded; it also runs when the user re-enables a disabled plugin:
+
+```lua
+function onEnable()
+  noctalia.runAsync("systemctl --user start my-plugin.service")
+end
+
+function onExit(_signal, reason)
+  if reason == "disable" then
+    noctalia.runAsync("systemctl --user stop my-plugin.service")
+  elseif reason == "uninstall" then
+    noctalia.runAsync("systemctl --user disable --now my-plugin.service")
+  end
+end
+```
+
+`onEnable()` describes an explicit plugin-manager action, not every service start. It does not run during ordinary
+Noctalia startup, a source update, a script reload, or a settings-driven service restart. Use top-level initialization
+for normal service startup.
+
+Lifecycle hooks can only run while an entry runtime exists. Removing a plugin that was already disabled cannot invoke
+`onExit(0, "uninstall")` because none of its entries are loaded. Cleanup that must also cover that sequence should
+therefore be idempotent and available through the plugin's normal controls.
 
 ### Reacting to settings changes in a service
 

@@ -82,6 +82,10 @@ exec-once=noctalia
 ```
 :::
 
+:::note[KDE Plasma]
+Add `noctalia` under System Settings → Autostart, or see [KDE Plasma](/v5/compositor-settings/kde/) for Plasma-specific limits (clipboard, blur, screenshots, and more).
+:::
+
 If your compositor expects startup commands to return after the shell has initialized, use `noctalia --daemon`. See the [Running Noctalia](/v5/getting-started/running-the-shell/) page for details.
 
 </FaqItem>
@@ -115,7 +119,7 @@ page for that exact instance.
 In text config, give each copy its own name, then set `type` to the widget you want:
 
 ```toml
-[bar.main]
+[bar.default]
 end = ["sysmon-left", "sysmon-right"]
 
 [widget.sysmon-left]
@@ -177,7 +181,7 @@ Attached panels (like the control center) sit flush against the bar, so the line
 **Mind the compositor blur.** The bar and an attached panel are separate Wayland surfaces, so the compositor blurs each one on its own. With a large blur sampling offset the two blur passes don't line up at the seam, and the gap between them becomes visible. How much shows up depends on the compositor: Hyprland handles it well, while Niri tends to reveal the split more. If the seam looks off with blur, lower your compositor's blur size/passes (or its sampling offset) rather than chasing it with `panel_overlap`.
 
 ```toml
-[bar.main]
+[bar.default]
 panel_overlap  = 0      # 1 is default; 0 removes the overlap, negative pushes the panel away
 contact_shadow = true   # dark gradient at the seam for a lifted look
 ```
@@ -299,7 +303,7 @@ services.upower.enable = true;
 The battery widget defaults to the system battery. If you want to show a peripheral or second battery, middle-click the
 battery widget and choose its **Device** setting. In text config, set the widget's `device` key.
 
-See the [`battery` widget docs](/v5/bar/widgets/#battery).
+See the [`battery` widget docs](/v5/bar/widgets/battery/).
 
 </FaqItem>
 
@@ -339,6 +343,12 @@ See [Location](/v5/services/location/), [Theme](/v5/theming/#mode), and [Night L
 Noctalia v5 authenticates through PAM using the `login` service. Make sure `/etc/pam.d/login` exists and is valid for your distribution.
 
 If you changed your PAM stack for fingerprint, security key, or other authentication methods, make sure those changes are present in the `login` PAM service used by Noctalia.
+
+</FaqItem>
+
+<FaqItem question="Does the lock screen engage before suspend?">
+
+Yes, when the lock screen is enabled. Noctalia holds a logind sleep delay inhibitor and locks the session on `PrepareForSleep` before allowing suspend or hibernate to proceed (including lid-close sleep). You do not need a separate idle daemon for lock-before-sleep.
 
 </FaqItem>
 

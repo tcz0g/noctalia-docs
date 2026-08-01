@@ -43,16 +43,19 @@ When `shell.launcher.app_grid` is enabled and every visible result is an applica
 - **Source**: Reads `.desktop` entries from standard XDG directories (e.g., `/usr/share/applications`, `~/.local/share/applications`).
 - **Search**: Matches against the application name, generic name, keywords, and categories.
 - **Scoring**: Uses fuzzy matching with weights. Activation count boosts the score.
+- **Terminal apps**: Entries with `Terminal=true` run inside a terminal. Prefer `export TERMINAL=wezterm` (or another emulator on `PATH`); do not put `-e` in `$TERMINAL`. See [Shell: launching apps](/v5/configuration/shell/#shell-settings) for discovery order and how this differs from `launch_apps_custom_command`.
 
 ### Calculator
 
 A built-in expression evaluator powered by [`libqalculate`](https://qalculate.github.io/).
 
-- **Prefix**: None (Global).
-- **Trigger**: Automatically activates when the query contains a digit and evaluates to a result.
+- **Prefix**: `/calc ` (also available globally).
+- **Trigger**: Automatically activates in global search when the query contains a digit. The explicit `/calc` prefix
+  also accepts digit-free expressions such as `/calc EUR`.
 - **Functionality**: Standard arithmetic and functions (`sin`, `cos`, `sqrt`, `pi`, `e`, …), plus
   unit conversion (`10 cm to in`, `100 km/h to mph`), number bases (`0xff`), and currency conversion
-  (`10 USD to EUR`). Pressing **Enter** copies the result to your clipboard.
+  (`10 USD to EUR`). Decimal and thousands separators follow the system numeric locale
+  (for example `10000,50+2000,25` under `pt_BR`). Pressing **Enter** copies the result to your clipboard.
 - **Currency rates**: Exchange rates are cached locally and refreshed in the background from libqalculate's
   ECB/global providers when `shell.launcher.fetch_exchange_rates` is enabled (the default). Refresh is also
   skipped when `[shell].offline_mode` is enabled; in either case the last cached rates are used.
@@ -154,6 +157,8 @@ Fields:
 
 Noctalia runs `exec` as a detached command; it does not automatically open a terminal. For interactive commands such as
 `dnf upgrade`, launch your terminal emulator explicitly (`foot -e ...`, `kitty -e ...`, `alacritty -e ...`, etc.).
+That is different from Application results with `Terminal=true`, which use `$TERMINAL` / terminal discovery
+(see [Shell settings](/v5/configuration/shell/#shell-settings)).
 
 Set `freeform = true` when the typed text itself should be activatable. The typed text after the prefix is available as
 `{query}`:
@@ -179,7 +184,7 @@ results.
 The launcher itself is mostly automatic, but its behavior is influenced by other sections of your config:
 
 - **[Keybinds](/v5/shell/#keybinds)**: Customize navigation (`up`, `down`) and activation (`validate`, `cancel`).
-- **[Shell](/v5/shell/#shell-settings)**: `ui_scale` and `font_family` affect the launcher's appearance. `shell.launcher.categories` controls the category filters. `show_icons`, `compact`, `app_grid`, `sort_by_usage`, and `fetch_exchange_rates` adjust result layout, ordering, and currency rate refresh (Settings → Launcher). `[shell.launcher.dmenu.entry.<id>]` adds custom dmenu-style providers backed by a shell command.
+- **[Shell](/v5/shell/#shell-settings)**: `ui_scale` and `font_family` affect the launcher's appearance. `shell.launcher.categories` controls the category filters. `show_icons`, `compact`, `app_grid`, `sort_by_usage`, `fetch_exchange_rates`, and `auto_paste` adjust result layout, ordering, currency rate refresh, and paste-after-copy (Settings → Launcher). `[shell.launcher.dmenu.entry.<id>]` adds custom dmenu-style providers backed by a shell command.
 - **[Wallpaper](/v5/desktop/wallpaper/)**: Defines the search paths for the Wallpaper provider.
 - **[Session actions](/v5/shell/#session-panel)**: Defines the actions shown by the Session provider.
 
