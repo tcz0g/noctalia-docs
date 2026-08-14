@@ -139,17 +139,43 @@ export const PLUGIN_API_LEVELS: PluginApiLevel[] = [
   },
   {
     level: 21,
-    noctaliaVersion: null,
+    noctaliaVersion: 'v5.0.0-beta.8',
     feature: 'plugin-ui-props',
     introduced:
       'The `ui.markdown` node, `submitOnEnter` on `ui.input`, and `stickToBottom` / `onScroll` / `scrollToBottomRev` on `ui.scroll`.',
   },
   {
     level: 22,
-    noctaliaVersion: null,
+    noctaliaVersion: 'v5.0.0-beta.8',
     feature: 'module-require',
     introduced:
       '`require("./path.luau")` loads relative `.luau` modules with entry-local caches and hot reload for loaded modules.',
+  },
+  {
+    level: 23,
+    noctaliaVersion: 'v5.0.0-beta.8',
+    feature: 'async-file-read',
+    introduced:
+      '`noctalia.readFileAsync(path, callback)` for bounded filesystem reads outside plugin VM workers.',
+  },
+  {
+    level: 24,
+    noctaliaVersion: null,
+    feature: 'direct-argv',
+    introduced: 'Argument-array form of `noctalia.runAsync()` for direct process execution without shell parsing.',
+  },
+  {
+    level: 25,
+    noctaliaVersion: null,
+    feature: 'wallpaper-mask',
+    introduced:
+      '`noctalia.wallpaperPath(connector)` and `noctalia.setWallpaperMask(connector, mask)` for source-aligned desktop-widget occlusion masks.',
+  },
+  {
+    level: 26,
+    noctaliaVersion: null,
+    feature: 'get-setting',
+    introduced: '`noctalia.getSetting(path)` for reading any effective shell config value by TOML dotted path.',
   },
 ];
 
