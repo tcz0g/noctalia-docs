@@ -19,6 +19,14 @@ See the [Installation guide](/noctalia/getting-started/installation/) for distro
 
 </FaqItem>
 
+<FaqItem question="Does Noctalia support touchscreen scrolling?">
+
+Yes. Tap controls normally. In a scrollable view, drag vertically over rows, buttons, or other controls to scroll; a fast release continues with a fling. On a vertical page, a horizontal drag remains with an axis-specific control such as a slider.
+
+Touch dragging requires the compositor to send `wl_touch.motion` events. If taps work but dragging never moves content, run `wev` and drag inside its window. A trace containing only `wl_touch.down` and `wl_touch.up` means the compositor or input stack is not forwarding touch motion to clients.
+
+</FaqItem>
+
 <FaqItem question="Will Noctalia v4 automatically upgrade to v5, and can I keep both installed?">
 
 No. Noctalia v5 is a fresh install, not an automatic upgrade from the Quickshell-based v4 line. It ships as a separate package, your package manager will not replace v4 with v5, and v4 settings are not migrated into v5.
@@ -258,35 +266,6 @@ Noctalia Settings does not create compositor keybinds. Keybinds belong in your c
 receives the IPC command.
 
 See the [IPC overview](/noctalia/ipc/) and [Shell commands](/noctalia/ipc/shell/).
-
-</FaqItem>
-
-<FaqItem question="Why are my tray icons missing after (re)starting Noctalia?">
-
-This typically happens when KDE is installed alongside your window manager. KDE's tray daemon (`kded6`) can interfere with Noctalia's system tray, though it usually doesn't autostart at cold boot.
-
-**Common cause:** Opening Dolphin (KDE's file manager) with sudo or elevated privileges will respawn `kded6`, which can cause tray icons to disappear.
-
-**Solution: Manually stop the process**
-
-Run this command, then restart Noctalia:
-```bash
-pkill kded6
-```
-
-You can also add this to your compositor's autostart configuration if needed:
-
-:::note[Niri]
-```ini
-spawn-sh-at-startup "pkill kded6"
-```
-:::
-
-:::note[Hyprland]
-```ini
-exec-once = pkill kded6
-```
-:::
 
 </FaqItem>
 

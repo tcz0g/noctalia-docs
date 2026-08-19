@@ -17,6 +17,7 @@ Shows PipeWire output (speaker) or input (microphone) volume and mute state.
 | `custom_image_colorize` | bool | `false` | When `true`, tint the custom image with the same color the glyph would use, including `mute_color` while muted |
 | `show_label` | bool | `true` | Show the volume percentage next to the glyph (horizontal and vertical bars) |
 | `mute_color` | string | `"error"` | Color role or hex color for the icon and label when muted |
+| `hide_when_inactive` | bool | `false` | *(Input only)* Hide the microphone widget while no application is capturing audio |
 
 ```toml
 [widget.volume]
@@ -30,6 +31,7 @@ mute_color = "error"
 [widget.input-volume]
 type = "volume"
 device = "input"
+hide_when_inactive = true   # input only: hide when no app is capturing audio
 
 [widget.output-volume]
 type = "volume"

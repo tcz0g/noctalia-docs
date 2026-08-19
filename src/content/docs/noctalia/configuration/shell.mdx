@@ -97,8 +97,10 @@ open_near_click_session        = false  # attached/floating: follow the bar clic
 [shell.launcher]
 categories      = true   # show launcher category filters; Tab toggles them while open
 show_icons      = true   # show application icons in launcher results
+show_app_origin_indicator = true # show package origin indicators on application results
 compact         = false  # smaller icons and tighter rows; hides subtitles
 app_grid        = false  # icon grid with labels underneath when results are apps only
+show_app_actions = false  # include searchable .desktop actions alongside applications
 sort_by_usage   = true   # boost frequently used apps and show Recently Used filter
 pinned          = []     # desktop entry IDs shown first when the launcher opens
 fetch_exchange_rates = true  # refresh currency rates from third-party online sources
@@ -195,7 +197,7 @@ Notes:
 - `settings_window_translucent`: when `true`, the Settings window background is drawn translucent. Compositor blur or other effects can be applied via compositor window rules.
 - `show_location`: when `false`, weather location text/coordinates are hidden in shell surfaces.
 - `app_icon_colorize` and `app_icon_color`: global application icon tinting for the dock, system tray (bar and drawer), taskbar, active-window widget, and launcher panel results. See [App icon colorization](#app-icon-colorization). Bar `launcher` / `control-center` widgets can optionally tint `custom_image` via `custom_image_colorize` using the widget **Color** setting (Presentation group in the widget editor).
-- `lang`: empty follows `$LC_ALL`, `$LC_MESSAGES`, then `$LANG`. Values may be BCP-47 tags (`pt-BR`, `zh-Hans`) or POSIX locale names (`pt_BR.UTF-8`, `zh_CN.UTF-8`). Chinese region locales infer script before matching catalogs, so `zh_CN` and `zh_SG` match `zh-Hans`, while `zh_TW`, `zh_HK`, and `zh_MO` match `zh-Hant`.
+- `lang`: empty follows `$LC_ALL`, `$LC_MESSAGES`, then `$LANG`. Values may be BCP-47 tags (`pt-BR`, `zh-Hans`) or POSIX locale names (`pt_BR.UTF-8`, `zh_CN.UTF-8`). Chinese region locales infer script before matching catalogs, so `zh_CN` and `zh_SG` match `zh-Hans`, while `zh_TW`, `zh_HK`, and `zh_MO` match `zh-Hant`. When a right-to-left catalog is loaded, Noctalia mirrors text, controls, grids, scrollbars, and directional icons automatically. Bar `start`/`center`/`end` lanes and dock item order remain on their configured physical sides. If no matching catalog loads and Noctalia falls back to English, the UI remains left-to-right.
 - `clipboard_enabled`: when `false`, disables clipboard **history** only - the history is no longer recorded or persisted, and the clipboard panel and bar/control-center shortcuts are unavailable. The live clipboard transport stays active, so basic copy/cut/paste in text fields and launcher math/emoji copy-to-clipboard actions keep working.
 - `clipboard_keep_from_closed_apps`: when `true` (default), Noctalia takes ownership of the live selection after the
   application that supplied it closes, keeping the last copied value pasteable. This is independent of clipboard
@@ -231,8 +233,10 @@ Notes:
 - `shell.panel.open_near_click_control_center`, `open_near_click_launcher`, `open_near_click_clipboard`, `open_near_click_wallpaper`, and `open_near_click_session` position attached or floating panels near the click location on the bar instead of centering them along the bar. They are ignored when a panel is `floating` with a `*_position` other than `auto`, since it is then pinned to a fixed screen position.
 - `shell.launcher.categories` shows compact category filters in the launcher for providers that expose categories, currently Applications and Emoji. **All** leaves results unfiltered. With a prefixed provider such as `/emo`, the filters come from that provider. Press `Tab` while the launcher is open to hide/show the filters; the left/right keybind actions move between filters.
 - `shell.launcher.show_icons` toggles application icons in launcher result rows. Prefixed-provider rows (for example emoji) still show their leading character when icons are hidden.
+- `shell.launcher.show_app_origin_indicator` toggles the package-origin overlays on application results, such as Flatpak, Snap, Nix, and AppImage.
 - `shell.launcher.compact` uses smaller icons, tighter padding, and single-line rows (subtitles hidden).
 - `shell.launcher.app_grid` switches to a multi-column icon grid with labels underneath when every visible result is an application. Mixed results (global search, prefixed providers, session actions, and so on) stay in the default list layout.
+- `shell.launcher.show_app_actions` includes searchable `.desktop` actions alongside application results. Action rows show the action name with the parent application underneath and launch that action directly. Disabled by default; application actions remain available from an application's right-click menu.
 - `shell.launcher.sort_by_usage` boosts frequently launched apps toward the top of results and exposes a **Recently Used** category filter. Disable it for strictly alphabetical ordering within each provider.
 - `shell.launcher.pinned` is an ordered list of desktop entry IDs shown first when the launcher opens without a query. Launcher pins are independent from `dock.pinned` and each taskbar widget's `pinned` list.
 - `shell.launcher.fetch_exchange_rates` refreshes currency exchange rates in the background from libqalculate's third-party online sources (enabled by default). Disable it to opt out of those requests; the last cached rates are still used for conversion. Refresh is also skipped when `[shell].offline_mode` is enabled.
