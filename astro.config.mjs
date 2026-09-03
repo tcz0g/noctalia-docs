@@ -3,6 +3,7 @@ import { defineConfig } from "astro/config";
 import { unified } from "@astrojs/markdown-remark";
 import starlight from "@astrojs/starlight";
 import { remarkHeadingId } from "remark-custom-heading-id";
+import { pagefindCodeWeight } from "./src/lib/pagefind-code-weight";
 
 // https://astro.build/config
 export default defineConfig({
@@ -15,11 +16,12 @@ export default defineConfig({
     "/v5/shell/": "/noctalia/configuration/shell/",
     "/v5/system/network/wpa_supplicant/": "/noctalia/getting-started/faq/#wpa-supplicant",
     "/v5/": "/noctalia/",
-    "/v4/": "/noctalia-shell/",
-    "/noctalia/shell/": "/noctalia/configuration/shell/",
+    "/v4/": "/noctalia-shell-legacy/",
+    "/noctalia-shell/": "/noctalia-shell-legacy/",
     "/noctalia/system/network/wpa_supplicant/": "/noctalia/getting-started/faq/#wpa-supplicant",
   },
   integrations: [
+    pagefindCodeWeight(),
     starlight({
       components: {
         Head: "./src/components/Head.astro",
@@ -31,13 +33,6 @@ export default defineConfig({
         Pagination: "./src/components/Pagination.astro",
       },
       head: [
-        {
-          tag: "script",
-          attrs: {
-            src: "/search-breadcrumb.js",
-            defer: true,
-          },
-        },
         {
           tag: "script",
           attrs: {
@@ -65,6 +60,26 @@ export default defineConfig({
       ],
       customCss: ["./src/styles/theme.css"],
       tableOfContents: true,
+      pagefind: {
+        ranking: {
+          // "logs" should not rank "logout"/"logo"/"logging" pages as highly as
+          // pages containing the term itself.
+          termSimilarity: 3.0,
+          // A page repeating a term dozens of times (reference tables, IPC
+          // command lists) saturates quickly instead of dominating the results.
+          termSaturation: 0.8,
+          // Long reference pages stay competitive with short widget stubs.
+          pageLength: 0.6,
+          metaWeights: {
+            // A title match is the strongest signal we have about intent.
+            title: 8.0,
+            // Breadcrumb and project name are display-only; they must not drag
+            // every page of a section or project into its own name's results.
+            breadcrumb: 0.0,
+            project: 0.0,
+          },
+        },
+      },
       sidebar: [
         {
           label: "Noctalia",
@@ -152,47 +167,67 @@ export default defineConfig({
           items: [{ autogenerate: { directory: "greeter" } }],
         },
         {
+          label: "Umbriel",
+          items: [
+            { label: "Umbriel", link: "umbriel/" },
+            { label: "Configuration", link: "umbriel/configuration/" },
+            { label: "Outputs", link: "umbriel/outputs/" },
+            { label: "Keybinds", link: "umbriel/keybinds/" },
+            { label: "Actions", link: "umbriel/actions/" },
+            { label: "Input", link: "umbriel/input/" },
+            { label: "Appearance", link: "umbriel/appearance/" },
+            { label: "Animation", link: "umbriel/animation/" },
+            { label: "Layout", link: "umbriel/layout/" },
+            { label: "Workspaces", link: "umbriel/workspaces/" },
+            { label: "Workspaces Overview", link: "umbriel/workspaces-overview/" },
+            { label: "Window Rules", link: "umbriel/window-rules/" },
+            { label: "Layer Rules", link: "umbriel/layer-rules/" },          
+            { label: "Scratchpads", link: "umbriel/scratchpads/" },
+            { label: "Security", link: "umbriel/security/" },
+          ],
+        },
+        {
           label: "Noctalia Shell",
           items: [
-            { label: "Overview", link: "noctalia-shell/" },
+            { label: "Overview", link: "noctalia-shell-legacy/" },
             {
               label: "Getting started",
               items: [
-                { label: "Installation", link: "noctalia-shell/getting-started/installation/" },
-                { label: "NixOS", link: "noctalia-shell/getting-started/nixos/" },
-                { label: "Running the Shell", link: "noctalia-shell/getting-started/running-the-shell/" },
-                { label: "Compositor Settings", items: [{ autogenerate: { directory: "noctalia-shell/getting-started/compositor-settings" } }] },
-                { label: "Keybinds", items: [{ autogenerate: { directory: "noctalia-shell/getting-started/keybinds" } }] },
-                { label: "FAQ", link: "noctalia-shell/getting-started/faq/" },
-                { label: "Uninstall", link: "noctalia-shell/getting-started/uninstall/" },
+                { label: "Installation", link: "noctalia-shell-legacy/getting-started/installation/" },
+                { label: "NixOS", link: "noctalia-shell-legacy/getting-started/nixos/" },
+                { label: "Running the Shell", link: "noctalia-shell-legacy/getting-started/running-the-shell/" },
+                { label: "Compositor Settings", items: [{ autogenerate: { directory: "noctalia-shell-legacy/getting-started/compositor-settings" } }] },
+                { label: "Keybinds", items: [{ autogenerate: { directory: "noctalia-shell-legacy/getting-started/keybinds" } }] },
+                { label: "FAQ", link: "noctalia-shell-legacy/getting-started/faq/" },
+                { label: "Uninstall", link: "noctalia-shell-legacy/getting-started/uninstall/" },
               ],
             },
             {
               label: "Configuration",
-              items: [{ autogenerate: { directory: "noctalia-shell/configuration" } }],
+              items: [{ autogenerate: { directory: "noctalia-shell-legacy/configuration" } }],
             },
             {
               label: "Theming",
               items: [
-                { label: "Basic App Theming", link: "noctalia-shell/theming/basic-app-theming/" },
-                { label: "Program Specific", items: [{ autogenerate: { directory: "noctalia-shell/theming/program-specific" } }] },
-                { label: "User Templates", link: "noctalia-shell/theming/user-templates/" },
-                { label: "User Color Schemes", link: "noctalia-shell/theming/color-schemes/" },
+                { label: "Basic App Theming", link: "noctalia-shell-legacy/theming/basic-app-theming/" },
+                { label: "Program Specific", items: [{ autogenerate: { directory: "noctalia-shell-legacy/theming/program-specific" } }] },
+                { label: "User Templates", link: "noctalia-shell-legacy/theming/user-templates/" },
+                { label: "User Color Schemes", link: "noctalia-shell-legacy/theming/color-schemes/" },
               ],
             },
             {
               label: "Development",
               items: [
-                { label: "Guidelines", link: "noctalia-shell/development/guidelines/" },
-                { label: "IPC", link: "noctalia-shell/development/ipc/" },
-                { label: "Widgets", link: "noctalia-shell/development/widgets/" },
-                { label: "Templates", link: "noctalia-shell/development/templates/" },
-                { label: "Plugins", items: [{ autogenerate: { directory: "noctalia-shell/development/plugins" } }] },
+                { label: "Guidelines", link: "noctalia-shell-legacy/development/guidelines/" },
+                { label: "IPC", link: "noctalia-shell-legacy/development/ipc/" },
+                { label: "Widgets", link: "noctalia-shell-legacy/development/widgets/" },
+                { label: "Templates", link: "noctalia-shell-legacy/development/templates/" },
+                { label: "Plugins", items: [{ autogenerate: { directory: "noctalia-shell-legacy/development/plugins" } }] },
               ],
             },
             {
               label: "Deprecated",
-              items: [{ autogenerate: { directory: "noctalia-shell/deprecated" } }],
+              items: [{ autogenerate: { directory: "noctalia-shell-legacy/deprecated" } }],
             },
           ],
         },

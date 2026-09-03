@@ -11,21 +11,19 @@ const pathname = Astro.url.pathname;
 const project = projectFromPath(pathname);
 const shouldRenderSearch =
   config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
-const faqHref =
-  project?.id === 'noctalia'
-    ? '/noctalia/getting-started/faq/'
-    : project?.id === 'noctalia-shell'
-      ? '/noctalia-shell/getting-started/faq/'
-      : undefined;
-const isLegacy = project?.id === 'noctalia-shell';
+const faqHref = project?.faqHref;
+const isLegacy = project?.legacy === true;
 ---
 
 <div class="header-inner">
   <div class="title-wrapper sl-flex">
     <SiteTitle />
+    <span class="docs-pill">docs</span>
   </div>
   <div class:list={['header-search sl-flex print:hidden', { 'no-project': !project }]}>
-    <div class="site-search" hidden={!project}>
+    {/* On the docs landing page the trigger is hidden, but the dialog must stay
+        rendered so the Ctrl+K shortcut still opens a working, unscoped search. */}
+    <div class="site-search" data-trigger-hidden={!project ? '' : undefined}>
       {shouldRenderSearch && <Search />}
     </div>
     <a href={faqHref ?? '#'} class="faq-button" hidden={!faqHref}>
@@ -67,19 +65,14 @@ const isLegacy = project?.id === 'noctalia-shell';
 </div>
 
 <script>
+  import { projectFromPath } from '../lib/projects';
+
   function contextForPath(pathname: string) {
-    const isCurrent = pathname === '/noctalia' || pathname.startsWith('/noctalia/');
-    const isLegacy =
-      pathname === '/noctalia-shell' || pathname.startsWith('/noctalia-shell/');
+    const project = projectFromPath(pathname);
     return {
-      isCurrent,
-      isLegacy,
-      hasProject: isCurrent || isLegacy || pathname === '/greeter' || pathname.startsWith('/greeter/'),
-      faqHref: isCurrent
-        ? '/noctalia/getting-started/faq/'
-        : isLegacy
-          ? '/noctalia-shell/getting-started/faq/'
-          : undefined,
+      hasProject: project !== undefined,
+      faqHref: project?.faqHref,
+      isLegacy: project?.legacy === true,
     };
   }
 
@@ -89,7 +82,7 @@ const isLegacy = project?.id === 'noctalia-shell';
     headerSearch?.classList.toggle('no-project', !context.hasProject);
 
     const search = document.querySelector<HTMLElement>('.site-search');
-    if (search) search.hidden = !context.hasProject;
+    if (search) search.toggleAttribute('data-trigger-hidden', !context.hasProject);
 
     const faqButton = document.querySelector<HTMLAnchorElement>('.faq-button');
     if (faqButton) {
@@ -120,9 +113,18 @@ const isLegacy = project?.id === 'noctalia-shell';
 </script>
 
 <style>
-  .site-search[hidden],
   .faq-button[hidden],
   .version-alert-banner[hidden] {
+    display: none;
+  }
+
+  /* Collapse the wrapper without removing the subtree: `display: contents`
+     keeps the dialog in the DOM and out of the header layout. */
+  .site-search[data-trigger-hidden] {
+    display: contents;
+  }
+
+  .site-search[data-trigger-hidden] :global(button[data-open-modal]) {
     display: none;
   }
 
@@ -140,6 +142,23 @@ const isLegacy = project?.id === 'noctalia-shell';
     margin: -0.25rem;
     padding: 0.25rem;
     overflow: clip;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Marks every page as the documentation subsite, not noctalia.dev. */
+  .docs-pill {
+    flex-shrink: 0;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
+    color: var(--sl-color-text-accent);
+    background-color: color-mix(in srgb, var(--sl-color-accent) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--sl-color-accent) 45%, transparent);
+    border-radius: 999px;
   }
 
   .header-search {

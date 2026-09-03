@@ -1,19 +1,19 @@
 ---
 title: FAQ
-description: Frequently asked questions for Noctalia v5.
+description: Frequently asked questions for Noctalia.
 sidebar:
   order: 99
 ---
 
 import FaqItem from '../../../../components/FaqItem.astro';
 
-Find answers to common setup and troubleshooting questions for Noctalia v5.
+Find answers to common setup and troubleshooting questions for Noctalia.
 
 ## Setup
 
 <FaqItem question="What distributions are supported?">
 
-Noctalia v5 is packaged for Arch Linux, NixOS, Fedora, openSUSE, and Void Linux. You can also install it manually on other Linux distributions if the required build and runtime dependencies are available.
+Noctalia is packaged for Arch Linux, NixOS, Fedora, openSUSE, and Void Linux. You can also install it manually on other Linux distributions if the required build and runtime dependencies are available.
 
 See the [Installation guide](/noctalia/getting-started/installation/) for distro-specific commands and manual install steps.
 
@@ -43,7 +43,7 @@ See the [Installation guide](/noctalia/getting-started/installation/) and [Runni
 
 No. Noctalia v5 is a native C++ and OpenGL ES shell launched with `noctalia`. The v4 line is Quickshell-based and uses `qs` / `noctalia-qs`, so v4 commands and configuration examples should not be copied into a v5 setup.
 
-If you are using the Quickshell-based version, use the [v4 documentation](/noctalia-shell/) instead.
+If you are using the Quickshell-based version, use the [v4 documentation](/noctalia-shell-legacy/) instead.
 
 </FaqItem>
 
@@ -115,6 +115,15 @@ See [How configuration works](/noctalia/configuration/) for the full load order 
 
 </FaqItem>
 
+
+<FaqItem question="How does Noctalia resolve application icons?">
+
+Noctalia resolves application icons through GTK's icon-theme support. The dock, taskbar, launcher, and other shell surfaces use the active GTK icon theme; configuring an icon theme only in a Qt control center does not change Noctalia's application icons.
+
+Configure and apply the icon theme through your system's GTK settings, for example with `nwg-look`.
+
+</FaqItem>
+
 <FaqItem question="Why do two copies of the same widget share settings?">
 
 Widget settings are attached to the widget name used in the bar list. If you place the same name twice, both entries use
@@ -174,7 +183,7 @@ See [Shell settings](/noctalia/configuration/shell/#shell-settings) and [Bars](/
 
 On Niri, making a bar transparent only changes Noctalia surface opacity. When Niri `ext-background-effects` support is active, Noctalia still publishes blur regions for its layer surfaces, so the compositor can keep blurring behind the bar.
 
-To disable that blur, keep the Noctalia `layer-rule` in your Niri config and set `blur false` inside its `background-effect` block. See [Niri compositor settings: Blur](/noctalia/compositor-settings/niri/?section=blur) for the full rule and notes.
+The default xray blur samples the wallpaper, which can also appear as faint wallpaper-colored pixels around rounded corners. Use `xray false` to blur the actual content behind Noctalia, or `blur false` to disable the effect. See [Niri compositor settings: Blur](/noctalia/compositor-settings/niri/?section=blur) for the full rules and explanation.
 
 </FaqItem>
 
@@ -319,7 +328,7 @@ See [Location](/noctalia/services/location/), [Theme](/noctalia/theming/#mode), 
 
 <FaqItem question="Why can't I unlock my lock screen?">
 
-Noctalia v5 authenticates through PAM using the `login` service. Make sure `/etc/pam.d/login` exists and is valid for your distribution.
+Noctalia authenticates through PAM using the `login` service. Make sure `/etc/pam.d/login` exists and is valid for your distribution.
 
 If you changed your PAM stack for fingerprint, security key, or other authentication methods, make sure those changes are present in the `login` PAM service used by Noctalia.
 

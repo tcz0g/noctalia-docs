@@ -75,6 +75,7 @@ function projectLabelFromRoute(route) {
 	if (project === 'noctalia') return 'noctalia · v5+';
 	if (project === 'greeter') return 'noctalia greeter';
 	if (project === 'noctalia-shell') return 'noctalia shell · v4';
+	if (project === 'umbriel') return 'umbriel';
 	return 'docs';
 }
 
@@ -396,7 +397,8 @@ async function main() {
 			version: 'docs',
 			section: '',
 			title: 'Documentation',
-			description: 'Noctalia documentation and guides.',
+			description:
+				'Guides, configuration, and reference for the Noctalia family - the Noctalia desktop shell, the Umbriel Wayland compositor, and the Noctalia Greeter.',
 		},
 		logo,
 		fonts,

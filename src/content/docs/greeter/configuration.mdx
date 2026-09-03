@@ -56,6 +56,8 @@ Set these in **`greeter.toml`**. The greeter UI and Sync do not change them. Whe
 | `[appearance].scheme` | Color scheme (`Synced`, builtin name such as `Noctalia`, …). Overrides last UI pick in `sync.toml`. |
 | `[appearance].password_style` | Password mask: `default` or `random` |
 | `[appearance].hide_logo` | Hide the Noctalia brand logo (`true` / `false`) |
+| `[appearance].power_buttons_position` | Power buttons: `bottom-right` (default), `bottom-left`, `top-left`, `top-right`, `hidden` |
+| `[appearance].scheme_selector_position` | Scheme selector: `top-right` (default), `top-left`, `bottom-left`, `bottom-right`, `hidden` |
 | `[appearance].theme_mode` | Theme mode string for Synced look (e.g. `dark`) |
 | `[appearance].corner_radius_scale` | Corner radius scale for Synced look |
 | `[appearance].font_family` | Font family for Synced look |
@@ -72,6 +74,7 @@ Set these in **`greeter.toml`**. The greeter UI and Sync do not change them. Whe
 | `[cursor].theme` / `.size` / `.path` | Cursor theme |
 | `[keyboard].layout` / `.variant` / `.options` / `.numlock` | XKB keymap |
 | `[auth].allow_empty_password` | Empty password submit for fprintd/smartcard PAM |
+| `[auth].request_timeout` | Seconds to wait for each greetd reply (`0`-`3600`); `0` disables the watchdog (default `60`) |
 
 ---
 
@@ -109,6 +112,10 @@ scheme = "Synced"
 password_style = "random"
 # Hide the Noctalia brand logo on the login screen.
 hide_logo = false
+# Power buttons position: "bottom-right" (default), "bottom-left", "top-left", "top-right", "hidden"
+power_buttons_position = "bottom-right"
+# Scheme selector position: "top-right" (default), "top-left", "bottom-left", "bottom-right", "hidden"
+scheme_selector_position = "top-right"
 theme_mode = "dark"
 corner_radius_scale = 1.0
 # Optional; empty / omit keeps the greeter default font.
@@ -183,6 +190,8 @@ numlock = true
 [auth]
 # Allow empty password submit (fprintd / smartcard PAM). Default false.
 allow_empty_password = false
+# Fail closed if greetd leaves a request unanswered (0-3600 seconds; 0 disables).
+request_timeout = 60
 ```
 
 ---
@@ -471,7 +480,7 @@ layout = "us,cz"
 options = "grp:alt_shift_toggle"
 ```
 
-Use standard [XKB layout codes](https://www.freedesktop.org/wiki/Software/XKeyboard-config/Rules/) (`de`, `fr`, `ru`, ...). List layouts on your system with `localectl list-x11-keymap-layouts` or check `/usr/share/X11/xkb/rules/base.lst`.
+Use standard [XKB layout codes](https://man.archlinux.org/man/xkeyboard-config.7#LAYOUTS) (`de`, `fr`, `ru`, ...). List layouts on your system with `localectl list-x11-keymap-layouts` or check `/usr/share/X11/xkb/rules/base.lst`.
 
 ### Num Lock
 
