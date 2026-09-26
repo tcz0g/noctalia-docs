@@ -11,15 +11,6 @@ export default defineConfig({
   vite: {
     logLevel: "error",
   },
-  redirects: {
-    "/v5/greeter/": "/greeter/",
-    "/v5/shell/": "/noctalia/configuration/shell/",
-    "/v5/system/network/wpa_supplicant/": "/noctalia/getting-started/faq/#wpa-supplicant",
-    "/v5/": "/noctalia/",
-    "/v4/": "/noctalia-shell-legacy/",
-    "/noctalia-shell/": "/noctalia-shell-legacy/",
-    "/noctalia/system/network/wpa_supplicant/": "/noctalia/getting-started/faq/#wpa-supplicant",
-  },
   integrations: [
     pagefindCodeWeight(),
     starlight({
@@ -103,6 +94,7 @@ export default defineConfig({
                 { label: "How configuration works", link: "noctalia/configuration/" },
                 { label: "Shell", link: "noctalia/configuration/shell/" },
                 { label: "Date format tokens", link: "noctalia/configuration/date-format-tokens/" },
+                { label: "Secret Service & keyrings", link: "noctalia/configuration/secret-service/" },
               ],
             },
             {
@@ -164,16 +156,27 @@ export default defineConfig({
         },
         {
           label: "Noctalia Greeter",
-          items: [{ autogenerate: { directory: "greeter" } }],
+          items: [
+            { label: "Overview", link: "greeter/" },
+            { label: "Installation", link: "greeter/installation/" },
+            { label: "Building from source", link: "greeter/building-from-source/" },
+            { label: "Configuration", link: "greeter/configuration/" },
+            { label: "Sync with Noctalia", link: "greeter/sync/" },
+            { label: "Displays", link: "greeter/displays/" },
+            { label: "Keyboard and cursor", link: "greeter/input/" },
+            { label: "Troubleshooting", link: "greeter/troubleshooting/" },
+          ],
         },
         {
           label: "Umbriel",
           items: [
             { label: "Umbriel", link: "umbriel/" },
+            { label: "Installation", link: "umbriel/installation/" },
             { label: "Configuration", link: "umbriel/configuration/" },
             { label: "Outputs", link: "umbriel/outputs/" },
             { label: "Keybinds", link: "umbriel/keybinds/" },
             { label: "Actions", link: "umbriel/actions/" },
+            { label: "IPC", link: "umbriel/ipc/" },
             { label: "Input", link: "umbriel/input/" },
             { label: "Appearance", link: "umbriel/appearance/" },
             { label: "Animation", link: "umbriel/animation/" },

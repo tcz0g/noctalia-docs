@@ -3,33 +3,53 @@ title: Workspaces
 description: Configure dynamic and static workspaces, inspect their state, and apply per-workspace layout rules.
 ---
 
-Choose a workspace model, inspect its state, and customize layout per workspace.
+Each output has its own workspaces. Choose a dynamic or fixed model, then use
+workspace rules to customize individual entries.
 
 ## Choose a workspace model
 
-Each output can use dynamic or static workspaces.
-
 ### Dynamic workspaces
 
-Omit `workspaces` or set it to `"dynamic"`. By default, the output starts with
-one empty workspace named `"1"`. With `empty_above = true`, it starts with
-distinct leading and trailing empty workspaces named `"1"` and `"2"`.
+Omit `workspaces` or set it to `"dynamic"`:
 
-When the last workspace gains a window, Umbriel adds another empty workspace.
-With `empty_above = true`, it also adds a new leading empty workspace when the
-first workspace gains a window.
+```toml
+[output.DP-1]
+workspaces = "dynamic"
+min_workspaces = 3
+```
 
-After you leave any other empty workspace, Umbriel removes it unless it is still
-active. The remaining workspaces are renumbered. If you switch to a workspace
-number beyond the current count, Umbriel uses the last workspace.
+A dynamic output keeps an empty workspace at the end and creates another when
+that workspace gains a window. Empty inactive anonymous workspaces are removed
+again. `min_workspaces` sets a floor, not a maximum.
+
+Set `empty_above = true` under the global
+[`[workspaces]`](#global-workspace-settings) section to keep an additional empty
+workspace at the beginning.
+
+#### Persistent names in a dynamic inventory
+
+A name-based `[[workspace]]` entry creates a persistent named workspace:
+
+```toml
+[[workspace]]
+name = "CHAT"
+layout.mode = "master"
+
+[[workspace]]
+name = "STATS"
+output = "DP-1"
+layout.mode = "dwindle"
+```
+
+Names are case-sensitive and local to an output. An entry without `output`
+applies independently to every dynamic output. Named workspaces remain when
+empty while anonymous neighbors continue their normal dynamic lifecycle.
+
+Each output supports up to 64 workspaces.
 
 ### Static workspaces
 
-Set `workspaces` to a number or an ordered list of names. Umbriel creates
-exactly those workspaces and keeps them when they are empty.
-
-Actions that take a workspace argument resolve names and numbered positions the
-same way here as everywhere else; see [Workspace selectors](#workspace-selectors).
+Use an integer for a fixed count or a string array for an ordered list of names:
 
 ```toml
 [output.DP-1]
@@ -39,46 +59,60 @@ workspaces = 5
 workspaces = ["WEB", "CHAT", "VIDEO"]
 ```
 
+A count creates anonymous positions. A string list creates exact names, so
+position 3 and the name `"3"` remain different selectors. Static workspaces are
+never pruned.
+
 ### Change workspaces on reload
 
-Workspace changes apply when you save a valid configuration. For static
-workspaces, Umbriel first matches existing workspaces by name and then by
-position. Windows from a removed workspace move to the nearest remaining one.
+Workspace changes apply on a valid configuration reload. Umbriel preserves
+matching names and positions where possible. Windows from a removed workspace
+move to the nearest remaining workspace.
 
-Switching to dynamic workspaces keeps populated and active workspaces,
-renumbers them, and adds an empty workspace at the end.
+Changing to a dynamic model keeps active and populated workspaces, then restores
+the required empty workspace.
 
-Other output and layout settings are refreshed during a reload as well.
+## Workspace axis
+
+Set the workspace arrangement per output:
+
+```toml
+[output.DP-1]
+workspace_axis = "horizontal"
+```
+
+| Value | Behavior |
+| --- | --- |
+| `"vertical"` | Workspaces stack top to bottom; scrolling layouts run left to right. |
+| `"horizontal"` | Workspaces sit side by side; scrolling layouts run top to bottom. |
+
+A three-finger swipe along the axis changes workspaces. A swipe across it moves
+the scrolling strip. The overview follows the same arrangement.
 
 ## Workspace selectors
 
-Actions that take a workspace argument, such as `workspace-switch`,
-`window-move-to-workspace`, and `column-move-to-workspace`, resolve it with
-these rules:
+Actions such as `workspace-switch` and `window-move-to-workspace` use these
+forms:
 
-- Exact names resolve globally first, including numeric names.
-- A unique name selects its workspace on any output.
-- Duplicate names resolve on the preferred output.
-- When no exact numeric name exists, the number selects that 1-based position
-  on the preferred output.
-- On a dynamic output, a number beyond the current workspace list selects the
-  last workspace.
-- Add `/output` to target another output explicitly.
+- Bare digits from `1` to `64` select a one-based position.
+- Other text selects an exact, case-sensitive name.
+- Double quotes force name lookup for an all-digit name.
+- `/output` restricts either form to one output.
 
-For example, `workspace-switch:3` selects a workspace named `3` when one
-exists and otherwise the third workspace on the preferred output, while
-`workspace-switch:CHAT/HDMI-A-1` selects `CHAT` on `HDMI-A-1`.
+```text
+workspace-switch:3
+workspace-switch:3/DP-2
+workspace-switch:CHAT/DP-2
+workspace-switch:"3"/DP-2
+```
 
-When `workspace-switch`, `window-move-to-workspace`, or
-`column-move-to-workspace` targets another monitor, the cursor warps to that
-monitor's center so subsequent actions continue there.
+Duplicate names resolve on the pointer-preferred output when possible.
+Otherwise the selector is ambiguous. On a dynamic output, a numeric position
+beyond the current count selects the last workspace.
 
 ## Inspect workspace state
 
-Run `umbriel workspaces` to list every workspace with its output and effective
-layout mode. An asterisk marks the active workspace on each output, while
-`(focused)` identifies the active workspace on the output Umbriel currently
-targets for actions.
+Run `umbriel workspaces` to list workspaces and their effective layout:
 
 ```text
 * DP-1: 1 [scrolling] (focused)
@@ -86,18 +120,9 @@ targets for actions.
 * DP-2: WEB [master]
 ```
 
-Use `umbriel workspaces --json` for structured output. Each entry contains the
-workspace `id`, `name`, one-based `index`, `output`, `active`, `focused`, and
-`layout`. `active` is per output, so more than one workspace can be active.
-`focused` is true for at most one workspace. The `layout` value is the current
-effective mode, including an override made with `workspace-set-layout`.
-
-For example, this prints the layout on the workspace currently targeted by
-workspace actions:
-
-```sh
-umbriel workspaces --json | jq -r '.[] | select(.focused).layout'
-```
+Use `umbriel workspaces --json` for scripts. Each entry includes its stable
+`id`, display `name`, one-based `index`, `output`, active and focused states,
+and effective `layout`.
 
 ## Global workspace settings
 
@@ -107,95 +132,80 @@ back_and_forth = true
 empty_above = false
 ```
 
-| Key              | Type | Default | Description                                                                                     |
-| ---------------- | ---- | ------- | ----------------------------------------------------------------------------------------------- |
-| `back_and_forth` | bool | `false` | Re-selecting the active workspace jumps back to the previously active workspace on that output. |
-| `empty_above`    | bool | `false` | Add an empty workspace at the start, in addition to the workspace at the end.                    |
-
-Output workspaces are dynamic by default. The workspace models and rules are
-documented below.
-
+| Key | Default | Description |
+| --- | --- | --- |
+| `back_and_forth` | `false` | Selecting the active workspace returns to the previous one on that output. |
+| `empty_above` | `false` | Keep a leading empty workspace on dynamic outputs. |
 
 ## Workspace rules
 
-`[[workspace]]` entries customize static workspaces or numbered positions on a
-dynamic output. They change layout settings but do not create workspaces.
+`[[workspace]]` entries customize one workspace. Select it with exactly one of
+`name` or `index`, and optionally restrict it to an output:
 
-Each rule selects a workspace by exactly one of `name` (string) or `index`
-(1-based integer from 1 to 64). An optional `output` restricts the rule to a
-case-insensitive connector or monitor name from `umbriel outputs`.
+```toml
+[[workspace]]
+name = "VIDEO"
+output = "DP-2"
+layout.mode = "dwindle"
+layout.gap = 4
+```
+
+On dynamic outputs, `name` also creates a persistent named workspace. `index`
+follows whichever workspace currently occupies that position. On static
+outputs, rules only customize members already present in the configured
+inventory.
 
 ### How settings are combined
 
-Workspace layout settings are applied in this order:
+Settings apply from least to most specific:
 
-1. The base `[layout]` settings.
-2. The matching output's
-   `layout.scrolling.default_width_fraction`, when configured.
-3. A matching `[[workspace]]` rule without an `output`.
-4. A matching `[[workspace]]` rule for the selected output.
+1. Global `[layout]`
+2. Matching output scrolling extent
+3. Matching workspace rule without `output`
+4. Matching workspace rule with `output`
 
-Later steps take precedence. On dynamic outputs, rules match workspace names
-and numbered positions as those workspaces are created or removed. The output
-step applies only to `default_width_fraction`; other layout fields pass directly
-from the global settings to workspace rules.
-
-Strut edges are resolved independently. A rule that sets only
-`layout.struts.top` inherits the other three edges from earlier steps.
+Later values replace earlier ones. Strut edges are resolved independently, so a
+rule can override only `layout.struts.top`.
 
 ### Available fields
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `name` | string | Select by workspace name (mutually exclusive with `index`). |
-| `index` | int | Select by 1-based position from 1 to 64 (mutually exclusive with `name`). |
-| `output` | string | Restrict to a connector or monitor name. |
-| `layout.mode` | string | `"scrolling"`, `"dwindle"`, or `"master"`. |
-| `layout.gap` | int | Gap in pixels (0-500). |
-| `layout.struts.{left,right,top,bottom}` | int | Signed logical pixels reserved at each edge of the normal tiled layout (-65535 to 65535). Positive values shrink the area and negative values expand it. |
-| `layout.width_presets` | float array | Fractions used by the width-cycle and height-cycle actions in every layout. |
-| `layout.scrolling.default_width_fraction` | float | Optional initial scrolling lane extent (0.1-1.0). It overrides the global and matching output values. When omitted at every level, the client chooses its initial logical extent. Reloading a default does not resize existing columns. |
-| `layout.scrolling.center_underfull_strip` | bool | Center the complete strip whenever it is narrower than the viewport. Disable to left-align underfull strips. |
-| `layout.scrolling.center_focused` | bool | Always center the focused column, including when the setting changes on config reload. |
-| `layout.scrolling.direction` | string | `"horizontal"` or `"vertical"` scroll axis. |
-| `layout.scrolling.expand_single_column` | bool | Fill the viewport for a workspace's lone tiled column, subject to client size hints and viewport bounds. Disable to keep the configured/default width. |
-| `layout.master.position` | string | Side occupied by the master area: `"left"` or `"right"`. |
-| `layout.master.default_width_fraction` | float | Master area fraction when both areas exist (0.1-0.9). |
-| `layout.master.new_on_top` | bool | Place newly opened windows at the top of the stack. Disable to place them at the bottom. |
-| `layout.dwindle.preserve_split` | bool | Keep each Dwindle split direction fixed after it is created when true. |
+| Key | Description |
+| --- | --- |
+| `name` | Select an exact name and create it on matching dynamic outputs. |
+| `index` | Select a current one-based position from 1 to 64. |
+| `output` | Restrict the rule to a connector or monitor name. |
+| `layout.mode` | Use `"scrolling"`, `"dwindle"`, or `"master"`. |
+| `layout.gap` | Set the window gap. |
+| `layout.struts.{left,right,top,bottom}` | Reserve signed logical pixels at each edge. |
+| `layout.extent_presets` | Set extent-cycle fractions. |
+| `layout.new_exits_fullscreen` | Choose which arriving windows exit fullscreen; see [Leaving fullscreen](/umbriel/layout/#leaving-fullscreen). |
+| `layout.scrolling.default_extent_fraction` | Set the initial scrolling-column extent. |
+| `layout.scrolling.center_underfull_strip` | Center or start-align an underfull strip. |
+| `layout.scrolling.center_focused` | Control when focus changes center a column. |
+| `layout.master.position` | Place the master area left, right, or center. |
+| `layout.master.default_width_fraction` | Set the master-area fraction. |
+| `layout.master.new_on_top` | Place new stack windows at the top or bottom. |
+| `layout.master.new_becomes_master` | Give the master slot to new windows. |
+| `layout.dwindle.preserve_split` | Keep split directions fixed. |
 
 ### Examples
 
 ```toml
-# Dwindle layout for the VIDEO workspace on DP-2
-[[workspace]]
-output = "DP-2"
-name = "VIDEO"
-layout.mode = "dwindle"
-
-# Scrolling for CHAT, dwindle for STATS, both on HDMI-A-1
 [[workspace]]
 output = "HDMI-A-1"
 name = "CHAT"
 layout.mode = "scrolling"
-layout.scrolling.direction = "vertical"
+layout.scrolling.center_focused = "always"
 
 [[workspace]]
 output = "HDMI-A-1"
 name = "STATS"
 layout.mode = "dwindle"
 
-# Customize workspace position 4 on DP-1
-[output.DP-1.layout.scrolling]
-default_width_fraction = 0.5
-
 [[workspace]]
 index = 4
 output = "DP-1"
 layout.gap = 0
 layout.struts.top = 24
-layout.scrolling.default_width_fraction = 0.667
+layout.scrolling.default_extent_fraction = 0.667
 ```
-
-In the last example, new columns on DP-1 use `0.5` except on workspace position
-4, where the more specific workspace rule uses `0.667`.
