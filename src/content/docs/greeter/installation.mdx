@@ -2,6 +2,7 @@
 title: Installation
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 For most users, the shortest path is to install a distribution package, point
 greetd at the installed session wrapper, and then switch display managers. The
@@ -15,7 +16,7 @@ greeter runs. Install desktop sessions such as niri or Hyprland separately.
 Choose the method for your system:
 
 - [Install a distribution package](#2-install-noctalia-greeter) on Arch Linux,
-  CachyOS, KaOS, Fedora, Debian, or Ubuntu.
+  CachyOS, KaOS, Fedora, openSUSE, Debian, or Ubuntu.
 - [Build from source](/greeter/building-from-source/) if no package is available.
 - Follow the separate [NixOS declarative setup](#nixos-declarative-setup) on
   NixOS. Do not follow the imperative service steps in sections 3–6.
@@ -37,17 +38,32 @@ Use one of the package options below. After it finishes, continue to
 
 ### Arch Linux
 
-Tagged releases are available as
-[`noctalia-greeter`](https://aur.archlinux.org/packages/noctalia-greeter) in the
-AUR. Install it with an AUR helper of your choice, for example:
+Tagged releases are moving from the AUR to Arch Linux's official Extra
+repository. During the transition, the package is in `extra-testing`; check the
+[package status](https://archlinux.org/packages/?name=noctalia-greeter) for its
+current repository. Once it is available in your enabled repositories, install it
+with:
 
 ```sh
-paru -S noctalia-greeter
+sudo pacman -Syu noctalia-greeter
 ```
 
-To follow development snapshots from `main`, install
+Development snapshots from `main` remain available as
 [`noctalia-greeter-git`](https://aur.archlinux.org/packages/noctalia-greeter-git)
-instead.
+in the AUR. Install them with an AUR helper, for example:
+
+```sh
+paru -S noctalia-greeter-git
+```
+
+The development package replaces the stable package. Both use the same greetd
+session wrapper and state directory. These packages leave greetd's
+configuration, PAM stack, and service management to you. After an upgrade,
+restart greetd when you are ready to use the new binaries.
+
+Optional packages are `polkit` for appearance-sync authorization and
+`xorg-xinit` for X11 sessions. `noctalia-git` also satisfies the optional
+`noctalia` dependency for wallpaper and palette sync.
 
 ### CachyOS
 
@@ -84,6 +100,46 @@ The snapshot package is being renamed to distinguish it from stable builds, so
 check the Copr package page for its current name. Fedora's default repositories
 do not currently carry Noctalia Greeter.
 
+### openSUSE
+
+Noctalia Greeter is available from the [official openSUSE repository](https://build.opensuse.org/package/show/openSUSE:Factory/noctalia-greeter):
+
+```sh
+sudo zypper refresh
+sudo zypper install noctalia-greeter
+```
+
+The development snapshots from `main` branch is also available via
+[home:neifua:Noctalia](https://build.opensuse.org/package/show/home:neifua:Noctalia)
+OBS repository as
+[`noctalia-greeter-git`](https://build.opensuse.org/package/show/home:neifua:Noctalia/noctalia-greeter-git),
+to install it:
+
+**Step 1**: Add the OBS repository
+
+<Tabs>
+  <TabItem label="Tumbleweed">
+    ```bash
+	sudo zypper addrepo --refresh --name 'Noctalia Project' https://download.opensuse.org/repositories/home:neifua:Noctalia/openSUSE_Tumbleweed/home:neifua:Noctalia.repo
+    ```
+  </TabItem>
+  <TabItem label="Slowroll">
+    ```bash
+	sudo zypper addrepo --refresh --name 'Noctalia Project' https://download.opensuse.org/repositories/home:neifua:Noctalia/openSUSE_Slowroll/home:neifua:Noctalia.repo
+    ```
+  </TabItem>
+</Tabs>
+
+**Step 2**: Refresh and install noctalia-greeter-git
+
+```bash
+sudo zypper refresh
+sudo zypper install noctalia-greeter-git
+```
+:::note
+`noctalia-greeter` is only available for **Tumbleweed** and **Slowroll**.
+:::
+
 ### Debian and Ubuntu
 
 The community-maintained Noctalia APT repository provides `noctalia-greeter`
@@ -91,11 +147,20 @@ for Debian Trixie, Debian Sid, and Ubuntu 26.04. Follow the shared
 [Debian repository setup instructions](https://docs.noctalia.dev/noctalia/getting-started/installation/#debian),
 then install:
 
+<Tabs>
+<TabItem label="Debian Trixie">
+```sh
+sudo apt update
+sudo apt install -t trixie-backports noctalia-greeter
+```
+</TabItem>
+<TabItem label="Debian Sid or Ubuntu 26.04">
 ```sh
 sudo apt update
 sudo apt install noctalia-greeter
 ```
-
+</TabItem>
+</Tabs>
 ## 3. Configure greetd
 
 If using the Debian or Ubuntu packages, `greetd` will have already been
@@ -127,6 +192,46 @@ Keep the existing greeter account if your configuration uses a user other than
 Some packages configure greetd automatically. In that case, verify that the
 existing `command` points to `noctalia-greeter-session` and leave the rest of
 the configuration intact.
+
+### Initialize greeter state
+
+Some packages and declarative modules prepare greeter state automatically.
+If yours does, verify its configured account and state directory. Otherwise,
+initialize the state after configuring greetd's session user.
+
+The shipped tmpfiles rule creates `/var/lib/noctalia-greeter` with mode `0750`
+and ownership `greeter:greeter` on systems that process it. If greetd uses a
+different greeter account, create `/etc/tmpfiles.d/noctalia-greeter.conf` with
+this line, replacing `ACCOUNT` and `GROUP` with that account's name and primary
+group:
+
+```text
+d /var/lib/noctalia-greeter 0750 ACCOUNT GROUP -
+```
+
+On systemd, apply the override so the directory has the right owner now and
+after reboot:
+
+```sh
+sudo systemd-tmpfiles --create noctalia-greeter.conf
+```
+
+Initialize the configuration files, or migrate state from an older installation:
+
+```sh
+sudo noctalia-greeter-apply-appearance --setup-system
+```
+
+This creates or updates `greeter.toml` and `sync.toml` without editing PAM.
+It also creates the state directory on systems without tmpfiles processing.
+When changing the greeter account, apply the tmpfiles override and run the
+helper again. Existing state-directory ownership takes precedence over the
+user in greetd's configuration when the helper resolves the account. Pass
+`GREETER_USER` explicitly if the existing owner differs from the intended user:
+
+```sh
+sudo env GREETER_USER=ACCOUNT noctalia-greeter-apply-appearance --setup-system
+```
 
 ## 4. Replace the current display manager safely
 
@@ -235,7 +340,7 @@ services.displayManager.noctalia-greeter = {
     cursor = {
       theme = "Bibata-Modern-Ice";
       size = 24;
-      path = "${pkgs.bibata-cursors}/share/icons";
+      path = pkgs.bibata-cursors;
     };
   };
 };
@@ -247,6 +352,68 @@ different option paths and cursor-theme interfaces, so enable only one.
 
 Rebuild and reboot through the normal NixOS workflow to verify that the greeter
 starts and lists the installed desktop sessions.
+
+## GNU Guix declarative setup
+
+Noctalia greeter is available in the third-party [`midnight`](https://codeberg.org/stampede/midnight) guix channel. To use it, add the following channel to your channels list in `~/.config/guix/channels.scm`:
+
+```scheme
+(channel
+    (name 'midnight)
+    (url "https://codeberg.org/stampede/midnight.git")
+    (branch "main")
+    (introduction
+        (make-channel-introduction
+            "d97d1568954cfcbf543c9fcdfd5771e2b730ae19"
+            (openpgp-fingerprint
+                "640A 2C3C E948 22D3 394B 40C3 CAFA EECA 00FF 9B1E"))))
+```
+
+Then, add `(midnight services noctalia-greeter)` to your list of imported modules
+
+For Noctalia greeter to work correctly, you have to:
+1. Add and configure the `greetd-service-type` to use `greetd-noctalia-greeter-session`,
+2. Add `elogind-service-type`, and `polkit-service-type`,
+3. Add the `noctalia-greeter-service-type`, which sets up the state directory, manages `greeter.toml` config file, adds the Polkit actions, and automatically adds the `noctalia-greeter` package to the system profile,
+4. Finally, remove any service that would conflict with greetd, like `mingetty-service-type` which is provided by `%base-services`, or SDDM/GDM which are provided by `%desktop-services`
+
+An example `services` section of the system configuration would look something like this:
+
+```scheme
+(services
+    (append
+        (modify-services %base-services
+            (delete mingetty-service-type))
+        
+        (list
+            (service polkit-service-type) ; omit if using %desktop-services
+            (service elogind-service-type) ; omit if using %desktop-services
+            
+            (service noctalia-greeter-service-type
+                (noctalia-greeter-configuration
+                    (cursor (noctalia-greeter-cursor-configuration
+                        (package bibata-cursor-theme)
+                        (theme "Bibata-Modern-Ice")
+                        (size 24)))
+                    (passwordless-sync-users '("username"))
+                    (config-file (list (local-file "./files/greeter.toml")))))
+            
+            (service greetd-service-type
+                (greetd-configuration
+                    (greeter-supplementary-groups '("video" "input"))
+                    (terminals
+                        (list
+                            (greetd-terminal-configuration
+                                (extra-shepherd-requirement '(elogind))
+                                (terminal-vt "1")
+                                (terminal-switch #t)
+                                (default-session-command (greetd-noctalia-greeter-session)))
+                            (greetd-terminal-configuration (terminal-vt "2"))
+                            (greetd-terminal-configuration (terminal-vt "3"))
+                            (greetd-terminal-configuration (terminal-vt "4"))
+                            (greetd-terminal-configuration (terminal-vt "5"))
+                            (greetd-terminal-configuration (terminal-vt "6")))))))))
+```
 
 ## Build from source
 

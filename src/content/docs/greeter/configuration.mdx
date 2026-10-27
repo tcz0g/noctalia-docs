@@ -13,6 +13,7 @@ Administrator-controlled settings live in `/var/lib/noctalia-greeter/greeter.tom
 - [Configuration reference](#configuration-reference)
 - [Default session](#default-session)
 - [Default user](#default-user)
+- [Clock](#clock)
 - [Full example](#full-example)
 
 ## Configuration files
@@ -31,7 +32,8 @@ The **Synced** scheme uses a complete `[appearance.palette]` from `greeter.toml`
 
 Wallpaper configuration is independent of the selected color scheme and does
 not require an `[appearance.palette]`. A wallpaper declared in `greeter.toml`
-therefore also works with built-in schemes such as `Noctalia`.
+therefore also works with built-in schemes such as `Noctalia`. JPEG XL (`.jxl`)
+wallpapers are supported for both default and per-output paths.
 
 ## Keys the greeter remembers
 
@@ -63,7 +65,14 @@ Set these keys in `greeter.toml`. A command-line `--session` or `--user` value t
 | `[appearance.palette]` | Complete Synced palette; takes precedence over Sync appearance |
 | `[appearance.wallpaper]` | Default wallpaper `path`, `fill_mode`, and `fill_color`; `fill_color` also works without an image, and `fill_mode` accepts `center`, `crop`, `fit`, `stretch`, `repeat`, or `span` |
 | `[appearance.wallpapers.<connector>]` | Per-output wallpaper override using the same fill modes |
+| `[clock].enabled` | Show the clock; defaults to `true` |
+| `[clock].position` | `above-panel` (default), `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center`, or `bottom-right` |
+| `[clock].time_format` | Time line format; defaults to `{:%H:%M}` |
+| `[clock].date_format` | Date line format; defaults to `%A, %x` |
+| `[clock].time_font_size` | Time font size before UI scaling; positive number, default `48` |
+| `[clock].date_font_size` | Date font size before UI scaling; positive number, default `14` |
 | `[output].name` | Connector or stable EDID identifier on which to pin the greeter |
+| `[output].use_synced_settings` | Use synced layout, transforms, and scales when not declared here; defaults to `true`. Set `false` to use declarative output settings and compositor defaults only |
 | `[output].layout` | Multi-monitor positions by connector or stable identifier; overrides synced layout |
 | `[output].width` / `.height` | Preferred DRM mode size |
 | `[output].refresh_rate` | Preferred DRM mode refresh rate in hertz, globally or per output |
@@ -88,7 +97,7 @@ for the limitation and configuration options.
 
 ## Default session
 
-The value is the desktop entry's exact **`Name=`**, which is the same text shown in the picker, not the `.desktop` filename. List available names with:
+The value is the desktop entry's **`Name=`**, which is the same text shown in the picker. The `.desktop` filename without the extension is also accepted as a fallback; a `Name=` match wins if both apply. List available names with:
 
 ```sh
 noctalia-greeter sessions
@@ -96,10 +105,10 @@ noctalia-greeter sessions
 
 Sessions are discovered from `wayland-sessions` and `xsessions` directories
 under `/usr/local/share`, `/usr/share`, `/run/current-system/sw/share`, and
-each base path in `XDG_DATA_DIRS`. Name lookup is case-insensitive, but using
-the exact picker spelling keeps the configuration unambiguous. If a
-`wayland-sessions` and an `xsessions` entry share the same `Name=`, the
-`wayland-sessions` entry wins.
+each base path in `XDG_DATA_DIRS`. Both name and filename lookup are
+case-insensitive, but using the exact picker spelling keeps the configuration
+unambiguous. If a `wayland-sessions` and an `xsessions` entry share the same
+`Name=`, the `wayland-sessions` entry wins.
 
 An `xsessions` entry's `Exec=` is run through `noctalia-greeter-xsession`,
 which bootstraps `Xorg` via `startx` before running it — `startx` handles
@@ -131,7 +140,7 @@ Set the default declaratively, especially when it contains spaces or punctuation
 default = "Hyprland (uwsm-managed)"
 ```
 
-Alternatively, a simple name can be passed through the greetd command:
+Alternatively, a simple name or the `.desktop` filename can be passed through the greetd command:
 
 ```toml
 command = "/usr/bin/noctalia-greeter-session -- --session niri"
@@ -153,6 +162,26 @@ default = "alice"
 You can instead pass `--user alice` after the session wrapper's `--`. Use the exact login name from `/etc/passwd`. **Esc** or the back button returns to the user list.
 
 Resolution order is command-line `--user`, then `[user].default`, then the user picker.
+
+## Clock
+
+The clock is enabled by default and centered above the login panel. It uses the active palette's `on_surface` color for the time and `on_surface_variant` for the date, including when the **Synced** scheme is selected.
+
+```toml
+[clock]
+enabled = true
+position = "above-panel"
+time_format = "{:%H:%M}"
+date_format = "%A, %x"
+time_font_size = 48
+date_font_size = 14
+```
+
+Set `time_font_size` and `date_font_size` independently, in logical pixels before UI scaling. Both accept positive integers or decimals and follow the greeter's automatic or manual display scale. Omitted or invalid values use the defaults shown above.
+
+Formats accept the same forms as Noctalia: bare `strftime` patterns such as `%H:%M`, or C++ chrono fields such as `{:%H:%M}`. Literal text is preserved, `\n` adds a line break, `%%` prints `%`, and `{{` / `}}` print braces. Common tokens include `%H` (24-hour hour), `%I` (12-hour hour), `%M` (minute), `%S` (second), `%p` (AM/PM), `%A` (weekday), `%B` (month), `%d` (day), `%Y` (year), and `%x` (locale date). Names and locale-preferred values follow the system's `LC_TIME`; the timezone follows the greeter host.
+
+Set either format to an empty string to hide only that line, or set `enabled = false` to disable the clock. The four corner positions use the same names as the power and scheme controls. When multiple elements use one corner, they stack inward in this order: scheme selector, power buttons, clock. `top-center` stays below a configuration-error banner. `bottom-center` occupies the logo's bottom-center slot when `[appearance].hide_logo = true`; with the logo visible, the clock stacks directly above it. On a display too short to fit a centered clock without touching the login panel, the date is omitted first; the clock is hidden only if the time line still cannot fit without overlap.
 
 ## Full example
 
